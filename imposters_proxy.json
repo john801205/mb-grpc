@@ -1,0 +1,93 @@
+{
+	"imposters": [
+		{
+			"port": 5568,
+			"protocol": "grpc",
+			"recordRequests": true,
+			"options": {
+				"protoc": {
+					"importDirs": [],
+					"protoFiles": []
+				}
+			},
+			"stubs": [
+				{
+					"responses": [
+						{
+							"is": {
+								"header": {
+									"aaaa": ["bbb"]
+								},
+								"message": {
+									"name": "Hello, world"
+								},
+								"trailer": {
+									"aaaa": ["bbb"]
+								},
+								"status": {
+									"code": "OK",
+									"message": "message"
+								}
+							}
+						}
+					],
+					"predicates": [
+						{
+							"equals": {
+								"method": "/routeguide.RouteGuide/GetFeature"
+							}
+						}
+					],
+					"caseSensitive": false
+				},
+				{
+					"responses": [
+						{
+							"is": {
+								"data": {
+									"message": "hello, world"
+								}
+							}
+						}
+					],
+					"predicates": [
+						{
+							"deepEquals": {
+								"method": "/routeguide.RouteGuide/RouteChat",
+								"data": [
+									{"type":"request","value":{}},
+									{"type":"response","value":{"message":"hello, world"}},
+									{"type":"request","value":{}}
+								]
+							}
+						}
+					],
+					"caseSensitive": false
+				},
+				{
+					"responses": [
+						{
+							"is": {
+								"data": {
+									"message": "hello, world"
+								}
+							}
+						}
+					],
+					"predicates": [
+						{
+							"deepEquals": {
+								"method": "/routeguide.RouteGuide/RouteChat",
+								"data": [
+									{"type":"request","value":{}}
+								]
+							}
+						}
+					],
+					"caseSensitive": false
+				}
+			]
+		}
+	]
+}
+

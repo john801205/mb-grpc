@@ -1,0 +1,67 @@
+{
+	"imposters": [
+		{
+			"port": 5567,
+			"protocol": "grpc",
+			"recordRequests": true,
+			"options": {
+				"protoc": {
+					"importDirs": [],
+					"protoFiles": []
+				}
+			},
+			"stubs": [
+				{
+					"responses": [
+						{
+							"proxy": {
+								"to": "localhost:5568",
+								"mode": "proxyOnce",
+								"predicateGenerators": [{
+									"matches": {
+										"method": true,
+										"data": true,
+										"header": true
+									}
+								}]
+							}
+						}
+					],
+					"predicates": [
+						{
+							"equals": {
+								"method": "/routeguide.RouteGuide/GetFeature"
+							}
+						}
+					],
+					"caseSensitive": false
+				},
+				{
+					"responses": [
+						{
+							"proxy": {
+								"to": "localhost:5568",
+								"mode": "proxyAlways",
+								"predicateGenerators": [{
+									"matches": {
+										"method": true,
+										"data": true,
+										"header": true
+									}
+								}]
+							}
+						}
+					],
+					"predicates": [
+						{
+							"equals": {
+								"method": "/routeguide.RouteGuide/RouteChat"
+							}
+						}
+					],
+					"caseSensitive": false
+				}
+			]
+		}
+	]
+}
