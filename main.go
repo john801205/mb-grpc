@@ -1,14 +1,11 @@
 package main
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
 	"log"
 	"net"
-	"net/http"
 	"os"
 
 	"google.golang.org/grpc"
@@ -102,10 +99,10 @@ type RpcStatus struct {
 }
 
 type RpcResponse struct {
-	Header  metadata.MD     `json:"header"`
-	Message json.RawMessage `json:"message"`
-	Trailer metadata.MD     `json:"trailer"`
-	Status  *RpcStatus      `json:"status"`
+	Header  metadata.MD     `json:"header,omitempty"`
+	Message json.RawMessage `json:"message,omitempty"`
+	Trailer metadata.MD     `json:"trailer,omitempty"`
+	Status  *RpcStatus      `json:"status,omitempty"`
 }
 
 func (s *MyServer)HandleUnaryCall(srv any, ctx context.Context, dec func(any) error, interceptor grpc.UnaryServerInterceptor) (any, error) {
@@ -226,9 +223,9 @@ func (s *MyServer)HandleUnaryCall(srv any, ctx context.Context, dec func(any) er
 
 type StreamData struct {
 	Header  metadata.MD
-	Message any
+	Message proto.Message
 	Trailer metadata.MD
-	Error   error
+	Status  *status.Status
 }
 
 
@@ -272,6 +269,188 @@ func (s *MyServer)HandleStreamCall(srv any, stream grpc.ServerStream) error {
 	if !ok {
 		return status.Error(codes.Internal, "unknown method descriptor")
 	}
+
+	var clientStream *ClientStream
+	var proxyCallbackURL string
+	serverStream := NewServerStream(intCtx, stream, methodDesc.Input())
+	var lastMessage proto.Message
+
+	rpcData := &RpcData{
+		Method: method,
+	}
+
+	for {
+		select {
+		case request, ok := <-serverStream.Requests():
+			if !ok {
+				serverStream = nil
+				continue
+			}
+
+			if request.Header != nil {
+				rpcData.Header = metadata.Join(rpcData.Header, request.Header)
+			}
+
+			if request.Message != nil {
+				data, err := protojson.Marshal(request.Message)
+				if err != nil {
+					return err
+				}
+
+				rpcData.Messages = append(rpcData.Messages, &RpcMessage{
+					Type: "request",
+					Value: data,
+				})
+
+				lastMessage = request.Message
+			}
+
+			if request.Status != nil {
+				return request.Status.Err()
+			}
+
+		case response, ok := <-clientStream.Responses():
+			if !ok {
+				clientStream = nil
+				continue
+			}
+
+			if proxyCallbackURL == "" {
+				return fmt.Errorf("unexpected response from proxied server: %+v", response)
+			}
+
+			var err error
+			var st *RpcStatus
+			var message json.RawMessage
+
+			if response.Message != nil {
+				message, err = protojson.Marshal(response.Message)
+				if err != nil {
+					return err
+				}
+			}
+
+			if response.Status != nil {
+				st = &RpcStatus{
+					Code: response.Status.Code(),
+					Message: response.Status.Message(),
+				}
+			}
+
+			rpcResp := &RpcResponse{
+				Header: response.Header,
+				Message: message,
+				Trailer: response.Trailer,
+				Status: st,
+			}
+
+			log.Println("client resp", rpcResp)
+
+			_, err = mountebankClient.SaveProxyResponse(intCtx, proxyCallbackURL, rpcResp)
+			if err != nil {
+				return err
+			}
+			proxyCallbackURL = ""
+
+			err = serverStream.SendMsg(response.Header, response.Trailer, response.Message)
+			if err != nil {
+				return err
+			}
+
+			if response.Message != nil {
+				data, err := protojson.Marshal(response.Message)
+				if err != nil {
+					return err
+				}
+
+				rpcData.Messages = append(rpcData.Messages, &RpcMessage{
+					Type: "response",
+					Value: data,
+				})
+				lastMessage = response.Message
+			}
+
+			if response.Status != nil {
+				return response.Status.Err()
+			}
+		}
+
+		for {
+			mbResp, err := mountebankClient.GetResponse(intCtx, rpcData)
+			if err != nil {
+				return err
+			}
+
+			if mbResp.Proxy != nil {
+				if clientStream == nil {
+					var err error
+					streamDesc := grpc.StreamDesc{
+						StreamName: method,
+						Handler: s.HandleStreamCall,
+						ServerStreams: methodDesc.IsStreamingServer(),
+						ClientStreams: methodDesc.IsStreamingClient(),
+					}
+					clientStream, err = NewClientStream(
+						intCtx, mbResp.Proxy.To,
+						&streamDesc, method, methodDesc.Output(),
+					)
+					if err != nil {
+						return err
+					}
+				}
+
+				if len(rpcData.Messages) > 0 && rpcData.Messages[len(rpcData.Messages)-1].Type == "request" {
+					err := clientStream.Forward(lastMessage)
+					if err != nil {
+						return err
+					}
+				}
+
+				proxyCallbackURL = mbResp.ProxyCallbackURL
+			}
+
+			if mbResp.Response != nil {
+				var resp proto.Message
+				rpcResp := &RpcResponse{}
+				err = json.Unmarshal(mbResp.Response, rpcResp)
+				if err != nil {
+					return err
+				}
+
+				if len(rpcResp.Message) != 0 {
+					resp = dynamicpb.NewMessage(methodDesc.Output())
+					err = protojson.Unmarshal(rpcResp.Message, resp)
+					if err != nil {
+						return err
+					}
+				}
+
+				err = serverStream.SendMsg(rpcResp.Header, rpcResp.Trailer, resp)
+				if err != nil {
+					return err
+				}
+
+				if resp != nil {
+					rpcData.Messages = append(rpcData.Messages, &RpcMessage{
+						Type: "response",
+						Value: rpcResp.Message,
+					})
+				}
+
+				if rpcResp.Status != nil {
+					return status.Error(rpcResp.Status.Code, rpcResp.Status.Message)
+				}
+
+				if resp != nil {
+					continue
+				}
+			}
+
+			break
+		}
+	}
+
+	/*
 
 	md, _ := metadata.FromIncomingContext(stream.Context())
 	log.Printf("headers: %+v", md)
@@ -511,6 +690,7 @@ func (s *MyServer)HandleStreamCall(srv any, stream grpc.ServerStream) error {
 			}
 		}
 	}
+	*/
 
 	return fmt.Errorf("shoud not be here")
 }

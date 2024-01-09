@@ -20,7 +20,7 @@
 								"predicateGenerators": [{
 									"matches": {
 										"method": true,
-										"data": true,
+										"messages": true,
 										"header": true
 									}
 								}]
@@ -41,11 +41,11 @@
 						{
 							"proxy": {
 								"to": "localhost:5568",
-								"mode": "proxyAlways",
+								"mode": "proxyOnce",
 								"predicateGenerators": [{
 									"matches": {
 										"method": true,
-										"data": true,
+										"messages": true,
 										"header": true
 									}
 								}]

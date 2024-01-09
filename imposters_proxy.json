@@ -44,7 +44,36 @@
 					"responses": [
 						{
 							"is": {
-								"data": {
+								"trailer": {
+									"ttt": ["hello, world"]
+								},
+								"status": {
+									"code": "OK",
+									"message": ""
+								}
+							}
+						}
+					],
+					"predicates": [
+						{
+							"deepEquals": {
+								"method": "/routeguide.RouteGuide/RouteChat",
+								"messages": [
+									{"type":"request","value":{}},
+									{"type":"response","value":{"message":"hello, world"}},
+									{"type":"request","value":{}},
+									{"type":"response","value":{"message":"hello, world"}}
+								]
+							}
+						}
+					],
+					"caseSensitive": false
+				},
+				{
+					"responses": [
+						{
+							"is": {
+								"message": {
 									"message": "hello, world"
 								}
 							}
@@ -54,7 +83,7 @@
 						{
 							"deepEquals": {
 								"method": "/routeguide.RouteGuide/RouteChat",
-								"data": [
+								"messages": [
 									{"type":"request","value":{}},
 									{"type":"response","value":{"message":"hello, world"}},
 									{"type":"request","value":{}}
@@ -68,7 +97,7 @@
 					"responses": [
 						{
 							"is": {
-								"data": {
+								"message": {
 									"message": "hello, world"
 								}
 							}
@@ -78,7 +107,7 @@
 						{
 							"deepEquals": {
 								"method": "/routeguide.RouteGuide/RouteChat",
-								"data": [
+								"messages": [
 									{"type":"request","value":{}}
 								]
 							}
