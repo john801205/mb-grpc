@@ -1,4 +1,4 @@
-module mountebank-grpc
+module github.com/john801205/mb-grpc
 
 go 1.21.5
 

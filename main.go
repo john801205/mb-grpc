@@ -7,6 +7,8 @@ import (
 	"log"
 	"net"
 	"os"
+	"strconv"
+	"strings"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -16,19 +18,17 @@ import (
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/proto"
-	"google.golang.org/protobuf/reflect/protodesc"
-	"google.golang.org/protobuf/reflect/protoreflect"
-	"google.golang.org/protobuf/reflect/protoregistry"
-	"google.golang.org/protobuf/types/descriptorpb"
 	"google.golang.org/protobuf/types/dynamicpb"
+
+	intProto "github.com/john801205/mb-grpc/internal/proto"
 )
 
 var (
-	methodMap = map[string]protoreflect.MethodDescriptor{}
-	mountebankClient = NewMountebankClient("http://localhost:2525/imposters/5567/_requests")
+	mountebankClient *MountebankClient
 )
 
 type MyServer struct {
+	registry *intProto.ProtoRegistry
 }
 
 type RpcMessage struct {
@@ -63,15 +63,15 @@ func (s *MyServer)HandleUnaryCall(srv any, ctx context.Context, dec func(any) er
 		return nil, status.Error(codes.Internal, "method doesn't exist in context")
 	}
 
-	methodDesc, ok := methodMap[method]
-	if !ok {
-		return nil, status.Error(codes.Internal, "unknown method descriptor")
+	methodDesc, err := s.registry.FindMethodDescriptorByName(method)
+	if err != nil {
+		return nil, err
 	}
 
 	md, _ := metadata.FromIncomingContext(ctx)
 
 	request := dynamicpb.NewMessage(methodDesc.Input())
-	err := dec(request)
+	err = dec(request)
 	if err != nil {
 		return nil, err
 	}
@@ -186,9 +186,9 @@ func (s *MyServer)HandleStreamCall(srv any, stream grpc.ServerStream) error {
 		return status.Error(codes.Internal, "method doesn't exist in context")
 	}
 
-	methodDesc, ok := methodMap[method]
-	if !ok {
-		return status.Error(codes.Internal, "unknown method descriptor")
+	methodDesc, err := s.registry.FindMethodDescriptorByName(method)
+	if err != nil {
+		return err
 	}
 
 	var clientStream *ClientStream
@@ -374,85 +374,71 @@ func (s *MyServer)HandleStreamCall(srv any, stream grpc.ServerStream) error {
 	return fmt.Errorf("shoud not be here")
 }
 
+type Config struct {
+	Port int     `json:"port"`
+	Host *string `json:"host"`
+
+	CallbackURLTemplate string `json:"callbackURLTemplate"`
+
+	Options *ConfigOptions `json:"options"`
+}
+
+type ConfigOptions struct {
+	Protoc *ProtocOptions `json:"protoc"`
+}
+
+type ProtocOptions struct {
+	ImportDirs map[string]string `json:"importDirs"`
+	ProtoFiles map[string]string `json:"protoFiles"`
+}
+
 func main() {
 	log.Println(os.Args)
 
-	myServer := new(MyServer)
+	config := &Config{}
+	err := json.Unmarshal([]byte(os.Args[1]), config)
+	if err != nil {
+		log.Fatal(err)
+	}
 
+	var importDirs []string
+	var protoFiles []string
+
+	if config.Options != nil && config.Options.Protoc != nil {
+		for _, importDir := range config.Options.Protoc.ImportDirs {
+			importDirs = append(importDirs, importDir)
+		}
+		for _, protoFile := range config.Options.Protoc.ProtoFiles {
+			protoFiles = append(protoFiles, protoFile)
+		}
+	}
+
+	registry, err := intProto.Load(importDirs, protoFiles)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	myServer := &MyServer{registry: registry}
 	grpcServer := grpc.NewServer()
 
-	data, err := os.ReadFile("/tmp/grpc-go/examples/route_guide/routeguide/route_guide.desc")
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	desc := new(descriptorpb.FileDescriptorSet)
-	err = proto.Unmarshal(data, desc)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	for _, file := range desc.GetFile() {
-		fd, err := protodesc.NewFile(file, protoregistry.GlobalFiles)
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		err = protoregistry.GlobalFiles.RegisterFile(fd);
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		for i := 0; i < fd.Messages().Len(); i++ {
-			msg := fd.Messages().Get(i)
-			err := protoregistry.GlobalTypes.RegisterMessage(dynamicpb.NewMessageType(msg))
-			if err != nil {
-				log.Fatal(err)
-			}
-		}
-
-		for i := 0; i < fd.Services().Len(); i++ {
-			service := fd.Services().Get(i)
-
-			serviceDesc := grpc.ServiceDesc{
-				ServiceName: string(service.FullName()),
-				HandlerType: (*any)(nil),
-				Metadata: fd.Path(),
-			}
-
-			for j := 0; j < service.Methods().Len(); j++ {
-				method := service.Methods().Get(j)
-
-				if method.IsStreamingClient() || method.IsStreamingServer() {
-					streamDesc := grpc.StreamDesc{
-						StreamName: string(method.Name()),
-						Handler: myServer.HandleStreamCall,
-						ServerStreams: method.IsStreamingServer(),
-						ClientStreams: method.IsStreamingClient(),
-					}
-					serviceDesc.Streams = append(serviceDesc.Streams, streamDesc)
-				} else {
-					methodDesc := grpc.MethodDesc{
-						MethodName: string(method.Name()),
-						Handler: myServer.HandleUnaryCall,
-					}
-					serviceDesc.Methods = append(serviceDesc.Methods, methodDesc)
-				}
-
-				methodMap["/" + string(service.FullName()) + "/" + string(method.Name())] = method
-			}
-
-			grpcServer.RegisterService(&serviceDesc, myServer)
-		}
-	}
-
+	registry.RegisterGenericService(grpcServer, myServer)
 	reflection.Register(grpcServer)
 
-	lis, err := net.Listen("tcp", ":5567")
+	host := ""
+	if config.Host != nil {
+		host = *config.Host
+	}
+	port := config.Port
+
+	lis, err := net.Listen("tcp", fmt.Sprintf("%s:%d", host, port))
 	if err != nil {
 		log.Fatalf("failed to listen: %v", err)
 	}
 	defer lis.Close()
+
+	callbackURL := strings.Replace(config.CallbackURLTemplate, ":port", strconv.Itoa(port), 1)
+	mountebankClient = NewMountebankClient(callbackURL)
+
 	fmt.Println("grpc")
 	grpcServer.Serve(lis)
 }
