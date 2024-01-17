@@ -6,8 +6,8 @@
 			"recordRequests": true,
 			"options": {
 				"protoc": {
-					"importDirs": [],
-					"protoFiles": []
+					"importDirs": ["/tmp/grpc-go/examples/route_guide/routeguide"],
+					"protoFiles": ["/tmp/grpc-go/examples/route_guide/routeguide/route_guide.proto"]
 				}
 			},
 			"stubs": [
@@ -21,7 +21,8 @@
 									"matches": {
 										"method": true,
 										"messages": true,
-										"header": true
+										"requestHeader": true,
+										"responseHeader": true
 									}
 								}]
 							}
@@ -46,7 +47,8 @@
 									"matches": {
 										"method": true,
 										"messages": true,
-										"header": true
+										"requestHeader": true,
+										"responseHeader": true
 									}
 								}]
 							}

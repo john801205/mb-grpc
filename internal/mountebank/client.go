@@ -8,6 +8,8 @@ import (
 	"io"
 	"log"
 	"net/http"
+
+	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
 type Client struct {
@@ -30,14 +32,27 @@ type getResponseProxy struct {
 
 type getResponseResponse struct {
 	// standard response
-	Response json.RawMessage `json:"response"`
+	Response *rpcResponse `json:"response"`
 
 	// proxy response
 	Proxy            *getResponseProxy `json:"proxy"`
 	ProxyCallbackURL string            `json:"callbackURL"`
 }
 
-func (c *Client) GetResponse(ctx context.Context, request any) (*getResponseResponse, error) {
+type GetResponseResponse struct {
+	// standard response
+	Response *RpcResponse
+
+	// proxy response
+	Proxy            *getResponseProxy
+	ProxyCallbackURL string
+}
+
+func (c *Client) GetResponse(
+	ctx context.Context,
+	request *RpcData,
+	desc protoreflect.MessageDescriptor,
+) (*GetResponseResponse, error) {
 	data, err := json.Marshal(&getResponseRequest{Request: request})
 	if err != nil {
 		return nil, err
@@ -70,20 +85,34 @@ func (c *Client) GetResponse(ctx context.Context, request any) (*getResponseResp
 
 	log.Println("mb", string(httpBody))
 
-	response := &getResponseResponse{}
-	err = json.Unmarshal(httpBody, response)
+	temp := &getResponseResponse{}
+	err = json.Unmarshal(httpBody, temp)
 	if err != nil {
 		return nil, err
 	}
 
-	return response, nil
+	resp, err := convert(temp.Response, desc)
+	if err != nil {
+		return nil, err
+	}
+
+	return &GetResponseResponse{
+		Response: resp,
+		Proxy: temp.Proxy,
+		ProxyCallbackURL: temp.ProxyCallbackURL,
+	}, nil
 }
 
 type saveProxyResponseRequest struct {
 	Response any `json:"proxyResponse"`
 }
 
-func (c *Client) SaveProxyResponse(ctx context.Context, callbackURL string, response any) (*getResponseResponse, error) {
+func (c *Client) SaveProxyResponse(
+	ctx context.Context,
+	callbackURL string,
+	response *RpcResponse,
+	desc protoreflect.MessageDescriptor,
+) (*GetResponseResponse, error) {
 	data, err := json.Marshal(&saveProxyResponseRequest{Response: response})
 	if err != nil {
 		return nil, err
@@ -114,11 +143,16 @@ func (c *Client) SaveProxyResponse(ctx context.Context, callbackURL string, resp
 		return nil, err
 	}
 
-	getResponse := &getResponseResponse{}
-	err = json.Unmarshal(httpBody, &getResponse.Response)
+	temp := &getResponseResponse{}
+	err = json.Unmarshal(httpBody, &temp.Response)
 	if err != nil {
 		return nil, err
 	}
 
-	return getResponse, nil
+	resp, err := convert(temp.Response, desc)
+	if err != nil {
+		return nil, err
+	}
+
+	return &GetResponseResponse{Response: resp}, nil
 }

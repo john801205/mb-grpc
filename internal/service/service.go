@@ -2,7 +2,7 @@ package service
 
 import (
 	"context"
-	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 
@@ -11,9 +11,7 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
-	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/proto"
-	"google.golang.org/protobuf/protoadapt"
 	"google.golang.org/protobuf/types/dynamicpb"
 
 	intGrpc "github.com/john801205/mb-grpc/internal/grpc"
@@ -31,35 +29,6 @@ func New(registry *intProto.Registry, mbClient *mountebank.Client) *Service {
 		registry: registry,
 		mbClient: mbClient,
 	}
-}
-
-type RpcMessage struct {
-	Type  string          `json:"type"`
-	Value json.RawMessage `json:"value"`
-}
-
-type RpcData struct {
-	Method    string        `json:"method"`
-	Header    metadata.MD   `json:"header"`
-	Messages  []*RpcMessage `json:"messages"`
-}
-
-type RpcStatusDetail struct {
-	Type  string          `json:"type"`
-	Value json.RawMessage `json:"value"`
-}
-
-type RpcStatus struct {
-	Code    codes.Code         `json:"code"`
-	Message string             `json:"message"`
-	Details []*RpcStatusDetail `json:"details"`
-}
-
-type RpcResponse struct {
-	Header  metadata.MD     `json:"header,omitempty"`
-	Message json.RawMessage `json:"message,omitempty"`
-	Trailer metadata.MD     `json:"trailer,omitempty"`
-	Status  *RpcStatus      `json:"status,omitempty"`
 }
 
 func (s *Service)HandleUnaryCall(srv any, ctx context.Context, dec func(any) error, interceptor grpc.UnaryServerInterceptor) (any, error) {
@@ -84,25 +53,15 @@ func (s *Service)HandleUnaryCall(srv any, ctx context.Context, dec func(any) err
 		return nil, err
 	}
 
-	value, err := protojson.Marshal(request)
+	rpcData := mountebank.NewRpcData(method)
+	err = rpcData.AddRequestData(md, request)
 	if err != nil {
 		return nil, err
 	}
 
-	rpcData := &RpcData{
-		Method: method,
-		Header: md,
-		Messages: []*RpcMessage{
-			{
-				Type: "request",
-				Value: value,
-			},
-		},
-	}
+	log.Println("request", rpcData)
 
-	log.Println("request", request, rpcData)
-
-	mbResp, err := s.mbClient.GetResponse(intCtx, rpcData)
+	mbResp, err := s.mbClient.GetResponse(intCtx, rpcData, methodDesc.Output())
 	if err != nil {
 		return nil, err
 	}
@@ -117,109 +76,37 @@ func (s *Service)HandleUnaryCall(srv any, ctx context.Context, dec func(any) err
 
 		var header metadata.MD
 		var trailer metadata.MD
-		var statusDetails []*RpcStatusDetail
 
 		intCtx = metadata.NewOutgoingContext(intCtx, md)
 		resp := dynamicpb.NewMessage(methodDesc.Output())
 		err = conn.Invoke(intCtx, method, request, resp, grpc.Header(&header), grpc.Trailer(&trailer))
-
-		rpcStatus := status.Convert(err)
-		for _, detail := range rpcStatus.Details() {
-			switch detail := detail.(type) {
-			case error:
-				return nil, detail
-			case proto.Message:
-				bytes, err := protojson.Marshal(detail)
-				if err != nil {
-					return nil, err
-				}
-
-				statusDetails = append(statusDetails, &RpcStatusDetail{
-					Type: string(proto.MessageName(detail)),
-					Value: bytes,
-				})
-			default:
-				return nil, fmt.Errorf("unexpected type in the status details")
-			}
-		}
-
-		message, err := protojson.Marshal(resp)
-		if err != nil {
-			return nil, err
-		}
-
-		rpcResp := &RpcResponse{
+		rpcResp := &mountebank.RpcResponse{
 			Header: header,
-			Message: message,
+			Message: resp,
 			Trailer: trailer,
-			Status: &RpcStatus{
-				Code: rpcStatus.Code(),
-				Message: rpcStatus.Message(),
-				Details: statusDetails,
-			},
+			Status: status.Convert(err),
 		}
 
-		mbResp, err = s.mbClient.SaveProxyResponse(intCtx, mbResp.ProxyCallbackURL, rpcResp)
+		mbResp, err = s.mbClient.SaveProxyResponse(intCtx, mbResp.ProxyCallbackURL, rpcResp, methodDesc.Output())
 		if err != nil {
 			return nil, err
 		}
 	}
 
-	var resp proto.Message
-	rpcResp := &RpcResponse{}
-	err = json.Unmarshal(mbResp.Response, rpcResp)
+	if mbResp.Response == nil {
+		return nil, errors.New("nil response from mountebank")
+	}
+
+	err = grpc.SetHeader(ctx, mbResp.Response.Header)
+	if err != nil {
+		return nil, err
+	}
+	err = grpc.SetTrailer(ctx, mbResp.Response.Trailer)
 	if err != nil {
 		return nil, err
 	}
 
-	err = grpc.SetHeader(ctx, rpcResp.Header)
-	if err != nil {
-		return nil, err
-	}
-	err = grpc.SetTrailer(ctx, rpcResp.Trailer)
-	if err != nil {
-		return nil, err
-	}
-
-	if len(rpcResp.Message) != 0 {
-		resp = dynamicpb.NewMessage(methodDesc.Output())
-		err = protojson.Unmarshal(rpcResp.Message, resp)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	err = nil
-	if rpcResp.Status != nil {
-		st := status.New(rpcResp.Status.Code, rpcResp.Status.Message)
-		if len(rpcResp.Status.Details) > 0 {
-			var details []protoadapt.MessageV1
-			for _, detail := range rpcResp.Status.Details {
-				msgType, err := s.registry.FindMessageByName(detail.Type)
-				if err != nil {
-					return nil, err
-				}
-
-				msg := msgType.New().Interface()
-				err = protojson.Unmarshal(detail.Value, msg)
-				if err != nil {
-					return nil, err
-				}
-
-				details = append(details, protoadapt.MessageV1Of(msg))
-
-			}
-
-			st, err = st.WithDetails(details...)
-			if err != nil {
-				return nil, err
-			}
-		}
-
-		err = st.Err()
-	}
-
-	return resp, err
+	return mbResp.Response.Message, mbResp.Response.Status.Err()
 }
 
 func (s *Service)HandleStreamCall(srv any, stream grpc.ServerStream) error {
@@ -241,11 +128,9 @@ func (s *Service)HandleStreamCall(srv any, stream grpc.ServerStream) error {
 	serverStream := intGrpc.NewServerStream(intCtx, stream, methodDesc.Input())
 	var lastMessage proto.Message
 
-	rpcData := &RpcData{
-		Method: method,
-	}
+	rpcData := mountebank.NewRpcData(method)
 
-	for {
+	for serverStream != nil || clientStream != nil {
 		select {
 		case request, ok := <-serverStream.Requests():
 			if !ok {
@@ -253,27 +138,16 @@ func (s *Service)HandleStreamCall(srv any, stream grpc.ServerStream) error {
 				continue
 			}
 
-			if request.Header != nil {
-				rpcData.Header = metadata.Join(rpcData.Header, request.Header)
-			}
-
-			if request.Message != nil {
-				data, err := protojson.Marshal(request.Message)
-				if err != nil {
-					return err
-				}
-
-				rpcData.Messages = append(rpcData.Messages, &RpcMessage{
-					Type: "request",
-					Value: data,
-				})
-
-				lastMessage = request.Message
-			}
-
 			if request.Status != nil {
 				return request.Status.Err()
 			}
+
+			err := rpcData.AddRequestData(request.Header, request.Message)
+			if err != nil {
+				return err
+			}
+
+			lastMessage = request.Message
 
 		case response, ok := <-clientStream.Responses():
 			if !ok {
@@ -285,56 +159,16 @@ func (s *Service)HandleStreamCall(srv any, stream grpc.ServerStream) error {
 				return fmt.Errorf("unexpected response from proxied server: %+v", response)
 			}
 
-			var err error
-			var st *RpcStatus
-			var message json.RawMessage
-
-			if response.Message != nil {
-				message, err = protojson.Marshal(response.Message)
-				if err != nil {
-					return err
-				}
-			}
-
-			if response.Status != nil {
-				var statusDetails []*RpcStatusDetail
-
-				for _, detail := range response.Status.Details() {
-					switch detail := detail.(type) {
-					case error:
-						return detail
-					case proto.Message:
-						bytes, err := protojson.Marshal(detail)
-						if err != nil {
-							return err
-						}
-
-						statusDetails = append(statusDetails, &RpcStatusDetail{
-							Type: string(proto.MessageName(detail)),
-							Value: bytes,
-						})
-					default:
-						return fmt.Errorf("unexpected type in the status details")
-					}
-				}
-
-				st = &RpcStatus{
-					Code: response.Status.Code(),
-					Message: response.Status.Message(),
-					Details: statusDetails,
-				}
-			}
-
-			rpcResp := &RpcResponse{
+			rpcResp := &mountebank.RpcResponse{
 				Header: response.Header,
-				Message: message,
+				Message: response.Message,
 				Trailer: response.Trailer,
-				Status: st,
+				Status: response.Status,
 			}
 
 			log.Println("client resp", rpcResp)
 
-			_, err = s.mbClient.SaveProxyResponse(intCtx, proxyCallbackURL, rpcResp)
+			_, err := s.mbClient.SaveProxyResponse(intCtx, proxyCallbackURL, rpcResp, methodDesc.Output())
 			if err != nil {
 				return err
 			}
@@ -345,26 +179,20 @@ func (s *Service)HandleStreamCall(srv any, stream grpc.ServerStream) error {
 				return err
 			}
 
-			if response.Message != nil {
-				data, err := protojson.Marshal(response.Message)
-				if err != nil {
-					return err
-				}
-
-				rpcData.Messages = append(rpcData.Messages, &RpcMessage{
-					Type: "response",
-					Value: data,
-				})
-				lastMessage = response.Message
-			}
-
 			if response.Status != nil {
 				return response.Status.Err()
 			}
+
+			err = rpcData.AddResponseData(response.Header, response.Message)
+			if err != nil {
+				return err
+			}
+
+			lastMessage = nil
 		}
 
 		for {
-			mbResp, err := s.mbClient.GetResponse(intCtx, rpcData)
+			mbResp, err := s.mbClient.GetResponse(intCtx, rpcData, methodDesc.Output())
 			if err != nil {
 				return err
 			}
@@ -387,78 +215,40 @@ func (s *Service)HandleStreamCall(srv any, stream grpc.ServerStream) error {
 					}
 				}
 
-				if len(rpcData.Messages) > 0 && rpcData.Messages[len(rpcData.Messages)-1].Type == "request" {
+				if lastMessage != nil {
 					err := clientStream.Forward(lastMessage)
 					if err != nil {
 						return err
 					}
+					lastMessage = nil
 				}
 
 				proxyCallbackURL = mbResp.ProxyCallbackURL
-			}
+			} else if !mbResp.Response.IsEmpty() {
+				lastMessage = nil
+				log.Println(mbResp.Response)
 
-			if mbResp.Response != nil {
-				var resp proto.Message
-				rpcResp := &RpcResponse{}
-				err = json.Unmarshal(mbResp.Response, rpcResp)
+				err = serverStream.SendMsg(
+					mbResp.Response.Header,
+					mbResp.Response.Trailer,
+					mbResp.Response.Message,
+				)
+				if err != nil {
+					return err
+				}
+				if mbResp.Response.Status != nil {
+					return mbResp.Response.Status.Err()
+				}
+
+				err = rpcData.AddResponseData(mbResp.Response.Header, mbResp.Response.Message)
 				if err != nil {
 					return err
 				}
 
-				if len(rpcResp.Message) != 0 {
-					resp = dynamicpb.NewMessage(methodDesc.Output())
-					err = protojson.Unmarshal(rpcResp.Message, resp)
-					if err != nil {
-						return err
-					}
-				}
-
-				err = serverStream.SendMsg(rpcResp.Header, rpcResp.Trailer, resp)
-				if err != nil {
-					return err
-				}
-
-				if resp != nil {
-					rpcData.Messages = append(rpcData.Messages, &RpcMessage{
-						Type: "response",
-						Value: rpcResp.Message,
-					})
-				}
-
-				if rpcResp.Status != nil {
-					st := status.New(rpcResp.Status.Code, rpcResp.Status.Message)
-					if len(rpcResp.Status.Details) > 0 {
-						var details []protoadapt.MessageV1
-						for _, detail := range rpcResp.Status.Details {
-							msgType, err := s.registry.FindMessageByName(detail.Type)
-							if err != nil {
-								return err
-							}
-
-							msg := msgType.New().Interface()
-							err = protojson.Unmarshal(detail.Value, msg)
-							if err != nil {
-								return err
-							}
-
-							details = append(details, protoadapt.MessageV1Of(msg))
-
-						}
-
-						st, err = st.WithDetails(details...)
-						if err != nil {
-							return err
-						}
-					}
-
-					return st.Err()
-				}
-
-				if resp != nil {
-					continue
-				}
+				continue
 			}
 
+			lastMessage = nil
 			break
 		}
 	}

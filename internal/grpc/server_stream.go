@@ -44,12 +44,16 @@ func (s *ServerStream) SendMsg(header, trailer metadata.MD, message any) error {
 		return status.Error(codes.Internal, "server stream hasn't been initialized")
 	}
 
-	err := s.stream.SetHeader(header)
-	if err != nil {
-		return err
+	if len(header) != 0 {
+		err := s.stream.SetHeader(header)
+		if err != nil {
+			return err
+		}
 	}
 
-	s.stream.SetTrailer(trailer)
+	if len(trailer) != 0 {
+		s.stream.SetTrailer(trailer)
+	}
 
 	if message == nil {
 		return nil
