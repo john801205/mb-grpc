@@ -169,6 +169,10 @@ func (r *Registry) FindMethodDescriptorByName(name string) (protoreflect.MethodD
 	return methodDesc, nil
 }
 
+func (r *Registry) FindMessageByName(name string) (protoreflect.MessageType, error) {
+	return protoregistry.GlobalTypes.FindMessageByName(protoreflect.FullName(name))
+}
+
 type GenericService interface {
 	HandleUnaryCall(any, context.Context, func(any) error, grpc.UnaryServerInterceptor) (any, error)
 	HandleStreamCall(any, grpc.ServerStream) error

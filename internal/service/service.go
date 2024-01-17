@@ -13,6 +13,7 @@ import (
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/protoadapt"
 	"google.golang.org/protobuf/types/dynamicpb"
 
 	intGrpc "github.com/john801205/mb-grpc/internal/grpc"
@@ -43,9 +44,15 @@ type RpcData struct {
 	Messages  []*RpcMessage `json:"messages"`
 }
 
+type RpcStatusDetail struct {
+	Type  string          `json:"type"`
+	Value json.RawMessage `json:"value"`
+}
+
 type RpcStatus struct {
-	Code    codes.Code `json:"code"`
-	Message string     `json:"message"`
+	Code    codes.Code         `json:"code"`
+	Message string             `json:"message"`
+	Details []*RpcStatusDetail `json:"details"`
 }
 
 type RpcResponse struct {
@@ -110,12 +117,31 @@ func (s *Service)HandleUnaryCall(srv any, ctx context.Context, dec func(any) err
 
 		var header metadata.MD
 		var trailer metadata.MD
+		var statusDetails []*RpcStatusDetail
 
 		intCtx = metadata.NewOutgoingContext(intCtx, md)
 		resp := dynamicpb.NewMessage(methodDesc.Output())
 		err = conn.Invoke(intCtx, method, request, resp, grpc.Header(&header), grpc.Trailer(&trailer))
 
 		rpcStatus := status.Convert(err)
+		for _, detail := range rpcStatus.Details() {
+			switch detail := detail.(type) {
+			case error:
+				return nil, detail
+			case proto.Message:
+				bytes, err := protojson.Marshal(detail)
+				if err != nil {
+					return nil, err
+				}
+
+				statusDetails = append(statusDetails, &RpcStatusDetail{
+					Type: string(proto.MessageName(detail)),
+					Value: bytes,
+				})
+			default:
+				return nil, fmt.Errorf("unexpected type in the status details")
+			}
+		}
 
 		message, err := protojson.Marshal(resp)
 		if err != nil {
@@ -129,6 +155,7 @@ func (s *Service)HandleUnaryCall(srv any, ctx context.Context, dec func(any) err
 			Status: &RpcStatus{
 				Code: rpcStatus.Code(),
 				Message: rpcStatus.Message(),
+				Details: statusDetails,
 			},
 		}
 
@@ -164,7 +191,32 @@ func (s *Service)HandleUnaryCall(srv any, ctx context.Context, dec func(any) err
 
 	err = nil
 	if rpcResp.Status != nil {
-		err = status.Error(rpcResp.Status.Code, rpcResp.Status.Message)
+		st := status.New(rpcResp.Status.Code, rpcResp.Status.Message)
+		if len(rpcResp.Status.Details) > 0 {
+			var details []protoadapt.MessageV1
+			for _, detail := range rpcResp.Status.Details {
+				msgType, err := s.registry.FindMessageByName(detail.Type)
+				if err != nil {
+					return nil, err
+				}
+
+				msg := msgType.New().Interface()
+				err = protojson.Unmarshal(detail.Value, msg)
+				if err != nil {
+					return nil, err
+				}
+
+				details = append(details, protoadapt.MessageV1Of(msg))
+
+			}
+
+			st, err = st.WithDetails(details...)
+			if err != nil {
+				return nil, err
+			}
+		}
+
+		err = st.Err()
 	}
 
 	return resp, err
@@ -245,9 +297,31 @@ func (s *Service)HandleStreamCall(srv any, stream grpc.ServerStream) error {
 			}
 
 			if response.Status != nil {
+				var statusDetails []*RpcStatusDetail
+
+				for _, detail := range response.Status.Details() {
+					switch detail := detail.(type) {
+					case error:
+						return detail
+					case proto.Message:
+						bytes, err := protojson.Marshal(detail)
+						if err != nil {
+							return err
+						}
+
+						statusDetails = append(statusDetails, &RpcStatusDetail{
+							Type: string(proto.MessageName(detail)),
+							Value: bytes,
+						})
+					default:
+						return fmt.Errorf("unexpected type in the status details")
+					}
+				}
+
 				st = &RpcStatus{
 					Code: response.Status.Code(),
 					Message: response.Status.Message(),
+					Details: statusDetails,
 				}
 			}
 
@@ -352,7 +426,32 @@ func (s *Service)HandleStreamCall(srv any, stream grpc.ServerStream) error {
 				}
 
 				if rpcResp.Status != nil {
-					return status.Error(rpcResp.Status.Code, rpcResp.Status.Message)
+					st := status.New(rpcResp.Status.Code, rpcResp.Status.Message)
+					if len(rpcResp.Status.Details) > 0 {
+						var details []protoadapt.MessageV1
+						for _, detail := range rpcResp.Status.Details {
+							msgType, err := s.registry.FindMessageByName(detail.Type)
+							if err != nil {
+								return err
+							}
+
+							msg := msgType.New().Interface()
+							err = protojson.Unmarshal(detail.Value, msg)
+							if err != nil {
+								return err
+							}
+
+							details = append(details, protoadapt.MessageV1Of(msg))
+
+						}
+
+						st, err = st.WithDetails(details...)
+						if err != nil {
+							return err
+						}
+					}
+
+					return st.Err()
 				}
 
 				if resp != nil {

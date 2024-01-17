@@ -25,8 +25,16 @@
 									"aaaa": ["bbb"]
 								},
 								"status": {
-									"code": "OK",
-									"message": "message"
+									"code": "UNKNOWN",
+									"message": "message",
+									"details": [
+										{
+											"type": "routeguide.Feature",
+											"value": {
+												"name": "Hello, world"
+											}
+										}
+									]
 								}
 							}
 						}
@@ -48,8 +56,16 @@
 									"ttt": ["hello, world"]
 								},
 								"status": {
-									"code": "OK",
-									"message": ""
+									"code": "ABORTED",
+									"message": "",
+									"details": [
+										{
+											"type": "routeguide.Feature",
+											"value": {
+												"name": "Hello, world"
+											}
+										}
+									]
 								}
 							}
 						}
