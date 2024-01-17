@@ -1,4 +1,4 @@
-package main
+package mountebank
 
 import (
 	"bytes"
@@ -10,12 +10,12 @@ import (
 	"net/http"
 )
 
-type MountebankClient struct {
+type Client struct {
 	getResponseURL string
 }
 
-func NewMountebankClient(getResponseURL string) *MountebankClient {
-	return &MountebankClient{
+func NewClient(getResponseURL string) *Client {
+	return &Client{
 		getResponseURL: getResponseURL,
 	}
 }
@@ -37,7 +37,7 @@ type getResponseResponse struct {
 	ProxyCallbackURL string            `json:"callbackURL"`
 }
 
-func (c *MountebankClient) GetResponse(ctx context.Context, request any) (*getResponseResponse, error) {
+func (c *Client) GetResponse(ctx context.Context, request any) (*getResponseResponse, error) {
 	data, err := json.Marshal(&getResponseRequest{Request: request})
 	if err != nil {
 		return nil, err
@@ -83,7 +83,7 @@ type saveProxyResponseRequest struct {
 	Response any `json:"proxyResponse"`
 }
 
-func (c *MountebankClient) SaveProxyResponse(ctx context.Context, callbackURL string, response any) (*getResponseResponse, error) {
+func (c *Client) SaveProxyResponse(ctx context.Context, callbackURL string, response any) (*getResponseResponse, error) {
 	data, err := json.Marshal(&saveProxyResponseRequest{Response: response})
 	if err != nil {
 		return nil, err

@@ -1,34 +1,35 @@
-package main
+package service
 
 import (
 	"context"
 	"encoding/json"
 	"fmt"
 	"log"
-	"net"
-	"os"
-	"strconv"
-	"strings"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/metadata"
-	"google.golang.org/grpc/reflection"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/dynamicpb"
 
+	intGrpc "github.com/john801205/mb-grpc/internal/grpc"
+	"github.com/john801205/mb-grpc/internal/mountebank"
 	intProto "github.com/john801205/mb-grpc/internal/proto"
-)
-
-var (
-	mountebankClient *MountebankClient
 )
 
 type MyServer struct {
 	registry *intProto.ProtoRegistry
+	mbClient *mountebank.Client
+}
+
+func New(registry *intProto.ProtoRegistry, mbClient *mountebank.Client) *MyServer {
+	return &MyServer{
+		registry: registry,
+		mbClient: mbClient,
+	}
 }
 
 type RpcMessage struct {
@@ -94,8 +95,7 @@ func (s *MyServer)HandleUnaryCall(srv any, ctx context.Context, dec func(any) er
 
 	log.Println("request", request, rpcData)
 
-
-	mbResp, err := mountebankClient.GetResponse(intCtx, rpcData)
+	mbResp, err := s.mbClient.GetResponse(intCtx, rpcData)
 	if err != nil {
 		return nil, err
 	}
@@ -132,7 +132,7 @@ func (s *MyServer)HandleUnaryCall(srv any, ctx context.Context, dec func(any) er
 			},
 		}
 
-		mbResp, err = mountebankClient.SaveProxyResponse(intCtx, mbResp.ProxyCallbackURL, rpcResp)
+		mbResp, err = s.mbClient.SaveProxyResponse(intCtx, mbResp.ProxyCallbackURL, rpcResp)
 		if err != nil {
 			return nil, err
 		}
@@ -170,13 +170,6 @@ func (s *MyServer)HandleUnaryCall(srv any, ctx context.Context, dec func(any) er
 	return resp, err
 }
 
-type StreamData struct {
-	Header  metadata.MD
-	Message proto.Message
-	Trailer metadata.MD
-	Status  *status.Status
-}
-
 func (s *MyServer)HandleStreamCall(srv any, stream grpc.ServerStream) error {
 	intCtx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -191,9 +184,9 @@ func (s *MyServer)HandleStreamCall(srv any, stream grpc.ServerStream) error {
 		return err
 	}
 
-	var clientStream *ClientStream
+	var clientStream *intGrpc.ClientStream
 	var proxyCallbackURL string
-	serverStream := NewServerStream(intCtx, stream, methodDesc.Input())
+	serverStream := intGrpc.NewServerStream(intCtx, stream, methodDesc.Input())
 	var lastMessage proto.Message
 
 	rpcData := &RpcData{
@@ -267,7 +260,7 @@ func (s *MyServer)HandleStreamCall(srv any, stream grpc.ServerStream) error {
 
 			log.Println("client resp", rpcResp)
 
-			_, err = mountebankClient.SaveProxyResponse(intCtx, proxyCallbackURL, rpcResp)
+			_, err = s.mbClient.SaveProxyResponse(intCtx, proxyCallbackURL, rpcResp)
 			if err != nil {
 				return err
 			}
@@ -297,7 +290,7 @@ func (s *MyServer)HandleStreamCall(srv any, stream grpc.ServerStream) error {
 		}
 
 		for {
-			mbResp, err := mountebankClient.GetResponse(intCtx, rpcData)
+			mbResp, err := s.mbClient.GetResponse(intCtx, rpcData)
 			if err != nil {
 				return err
 			}
@@ -311,7 +304,7 @@ func (s *MyServer)HandleStreamCall(srv any, stream grpc.ServerStream) error {
 						ServerStreams: methodDesc.IsStreamingServer(),
 						ClientStreams: methodDesc.IsStreamingClient(),
 					}
-					clientStream, err = NewClientStream(
+					clientStream, err = intGrpc.NewClientStream(
 						intCtx, mbResp.Proxy.To,
 						&streamDesc, method, methodDesc.Output(),
 					)
@@ -372,73 +365,4 @@ func (s *MyServer)HandleStreamCall(srv any, stream grpc.ServerStream) error {
 	}
 
 	return fmt.Errorf("shoud not be here")
-}
-
-type Config struct {
-	Port int     `json:"port"`
-	Host *string `json:"host"`
-
-	CallbackURLTemplate string `json:"callbackURLTemplate"`
-
-	Options *ConfigOptions `json:"options"`
-}
-
-type ConfigOptions struct {
-	Protoc *ProtocOptions `json:"protoc"`
-}
-
-type ProtocOptions struct {
-	ImportDirs map[string]string `json:"importDirs"`
-	ProtoFiles map[string]string `json:"protoFiles"`
-}
-
-func main() {
-	log.Println(os.Args)
-
-	config := &Config{}
-	err := json.Unmarshal([]byte(os.Args[1]), config)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	var importDirs []string
-	var protoFiles []string
-
-	if config.Options != nil && config.Options.Protoc != nil {
-		for _, importDir := range config.Options.Protoc.ImportDirs {
-			importDirs = append(importDirs, importDir)
-		}
-		for _, protoFile := range config.Options.Protoc.ProtoFiles {
-			protoFiles = append(protoFiles, protoFile)
-		}
-	}
-
-	registry, err := intProto.Load(importDirs, protoFiles)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	myServer := &MyServer{registry: registry}
-	grpcServer := grpc.NewServer()
-
-	registry.RegisterGenericService(grpcServer, myServer)
-	reflection.Register(grpcServer)
-
-	host := ""
-	if config.Host != nil {
-		host = *config.Host
-	}
-	port := config.Port
-
-	lis, err := net.Listen("tcp", fmt.Sprintf("%s:%d", host, port))
-	if err != nil {
-		log.Fatalf("failed to listen: %v", err)
-	}
-	defer lis.Close()
-
-	callbackURL := strings.Replace(config.CallbackURLTemplate, ":port", strconv.Itoa(port), 1)
-	mountebankClient = NewMountebankClient(callbackURL)
-
-	fmt.Println("grpc")
-	grpcServer.Serve(lis)
 }
