@@ -77,18 +77,20 @@ func (s *ServerStream) fetchRequests() {
 	for {
 		request := dynamicpb.NewMessage(s.messageDesc)
 		err := s.stream.RecvMsg(request)
-		var st *status.Status
+		var req *StreamData
 
 		if err == io.EOF {
 			return
 		} else if err != nil {
-			st = status.Convert(err)
+			req = &StreamData{
+				Status: status.Convert(err),
+			}
+		} else {
+			req = &StreamData{
+				Message: request,
+			}
 		}
 
-		req := &StreamData{
-			Message: request,
-			Status: st,
-		}
 		select {
 		case s.requestCh <- req:
 		case <-s.ctx.Done():

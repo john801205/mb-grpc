@@ -17,7 +17,7 @@ import (
 	"google.golang.org/protobuf/types/dynamicpb"
 )
 
-type ProtoRegistry struct {
+type Registry struct {
 	files *protoregistry.Files
 }
 
@@ -97,7 +97,7 @@ func loadFiles(files *descriptorpb.FileDescriptorSet) error {
 	return nil
 }
 
-func Load(importDirs, protoFiles []string) (*ProtoRegistry, error) {
+func Load(importDirs, protoFiles []string) (*Registry, error) {
 	tmpDir, err := os.MkdirTemp("", "mb-grpc")
 	if err != nil {
 		return nil, err
@@ -140,10 +140,10 @@ func Load(importDirs, protoFiles []string) (*ProtoRegistry, error) {
 		return nil, err
 	}
 
-	return &ProtoRegistry{files: files}, nil
+	return &Registry{files: files}, nil
 }
 
-func (r *ProtoRegistry) FindMethodDescriptorByName(name string) (protoreflect.MethodDescriptor, error) {
+func (r *Registry) FindMethodDescriptorByName(name string) (protoreflect.MethodDescriptor, error) {
 	slices := strings.SplitN(name, "/", 3)
 	if len(slices) != 3 {
 		return nil, fmt.Errorf("unknown method format: %s", name)
@@ -174,7 +174,7 @@ type GenericService interface {
 	HandleStreamCall(any, grpc.ServerStream) error
 }
 
-func (r *ProtoRegistry) RegisterGenericService(
+func (r *Registry) RegisterGenericService(
 	server *grpc.Server,
 	genericService GenericService,
 ) {

@@ -20,13 +20,13 @@ import (
 	intProto "github.com/john801205/mb-grpc/internal/proto"
 )
 
-type MyServer struct {
-	registry *intProto.ProtoRegistry
+type Service struct {
+	registry *intProto.Registry
 	mbClient *mountebank.Client
 }
 
-func New(registry *intProto.ProtoRegistry, mbClient *mountebank.Client) *MyServer {
-	return &MyServer{
+func New(registry *intProto.Registry, mbClient *mountebank.Client) *Service {
+	return &Service{
 		registry: registry,
 		mbClient: mbClient,
 	}
@@ -55,7 +55,7 @@ type RpcResponse struct {
 	Status  *RpcStatus      `json:"status,omitempty"`
 }
 
-func (s *MyServer)HandleUnaryCall(srv any, ctx context.Context, dec func(any) error, interceptor grpc.UnaryServerInterceptor) (any, error) {
+func (s *Service)HandleUnaryCall(srv any, ctx context.Context, dec func(any) error, interceptor grpc.UnaryServerInterceptor) (any, error) {
 	intCtx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -170,7 +170,7 @@ func (s *MyServer)HandleUnaryCall(srv any, ctx context.Context, dec func(any) er
 	return resp, err
 }
 
-func (s *MyServer)HandleStreamCall(srv any, stream grpc.ServerStream) error {
+func (s *Service)HandleStreamCall(srv any, stream grpc.ServerStream) error {
 	intCtx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
