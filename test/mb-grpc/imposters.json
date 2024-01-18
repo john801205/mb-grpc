@@ -203,6 +203,102 @@
 						}
 					],
 					"caseSensitive": false
+				},
+				{
+					"responses": [
+						{
+							"is": {
+								"header": {
+									"symbol": ["-_.~!#$&'()*+,/:;=?@[]%20"]
+								},
+								"message": {
+									"pong": "你好，世界"
+								},
+								"trailer": {
+									"symbol": ["-_.~!#$&'()*+,/:;=?@[]%20"]
+								},
+								"status": {
+									"code": "OK"
+								}
+							}
+						}
+					],
+					"predicates": [
+						{
+							"equals": {
+								"method": "/pingpong.Service/PingPingPong",
+								"messages": [
+									{
+										"type": "request",
+										"value": {
+											"ping": "success"
+										}
+									},
+									{
+										"type": "request",
+										"value": {
+											"ping": "success"
+										}
+									}
+								]
+							}
+						}
+					],
+					"caseSensitive": false
+				},
+				{
+					"responses": [
+						{
+							"is": {
+								"header": {
+									"symbol": ["-_.~!#$&'()*+,/:;=?@[]%20"]
+								},
+								"trailer": {
+									"symbol": ["-_.~!#$&'()*+,/:;=?@[]%20"]
+								},
+								"status": {
+									"code": "INTERNAL",
+									"message": "message",
+									"details": [
+										{
+											"type": "pingpong.Pong",
+											"value": {
+												"pong": "你好，世界"
+											}
+										}
+									]
+								}
+							}
+						}
+					],
+					"predicates": [
+						{
+							"equals": {
+								"method": "/pingpong.Service/PingPingPong",
+								"messages": [
+									{
+										"type": "request",
+										"value": {
+											"ping": "failure"
+										}
+									},
+									{
+										"type": "request",
+										"value": {
+											"ping": "failure"
+										}
+									},
+									{
+										"type": "request",
+										"value": {
+											"ping": "failure"
+										}
+									}
+								]
+							}
+						}
+					],
+					"caseSensitive": false
 				}
 			]
 		}

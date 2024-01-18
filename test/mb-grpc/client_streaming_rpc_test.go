@@ -2,7 +2,6 @@ package mbgrpc
 
 import (
 	"context"
-	"io"
 	"net"
 	"reflect"
 	"testing"
@@ -13,32 +12,55 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/encoding/prototext"
 	"google.golang.org/protobuf/proto"
 
 	pb "github.com/john801205/mb-grpc/test/mb-grpc/pingpong"
 )
 
-type serverStreamingRPCServer struct {
+type clientStreamingRPCServer struct {
 	pb.UnimplementedServiceServer
+
+	ignore bool
 }
 
-func (s *serverStreamingRPCServer) PingPongPong(ping *pb.Ping, stream pb.Service_PingPongPongServer) error {
+func (s *clientStreamingRPCServer) PingPingPong(stream pb.Service_PingPingPongServer) error {
 	header := metadata.Pairs("symbol", "-_.~!#$&'()*+,/:;=?@[]%20")
 	stream.SetHeader(header)
 	trailer := metadata.Pairs("symbol", "-_.~!#$&'()*+,/:;=?@[]%20")
 	stream.SetTrailer(trailer)
 
-	if ping.Ping == "success" {
-		for i := 0; i < 2; i++ {
-			err := stream.Send(&pb.Pong{Pong: "你好，世界"})
-			if err != nil {
-				return err
-			}
+	ping, err := stream.Recv()
+	if err != nil {
+		return err
+	}
+	for s.ignore {
+		ping, err = stream.Recv()
+		if err != nil {
+			return err
 		}
-		return nil
+	}
+
+	if ping.Ping == "success" {
+		_, err := stream.Recv()
+		if err != nil {
+			return err
+		}
+
+		return stream.SendAndClose(&pb.Pong{Pong: "你好，世界"})
 	} else if ping.Ping == "failure" {
+		_, err := stream.Recv()
+		if err != nil {
+			return err
+		}
+
+		_, err = stream.Recv()
+		if err != nil {
+			return err
+		}
+
 		st := status.New(codes.Internal, "message")
-		st, err := st.WithDetails(&pb.Pong{Pong: "你好，世界"})
+		st, err = st.WithDetails(&pb.Pong{Pong: "你好，世界"})
 		if err != nil {
 			return err
 		}
@@ -48,7 +70,7 @@ func (s *serverStreamingRPCServer) PingPongPong(ping *pb.Ping, stream pb.Service
 	return status.Errorf(codes.Unknown, "unexpected ping")
 }
 
-func testServerStreamingRPC(ctx context.Context, t *testing.T) {
+func testClientStreamingRPC(ctx context.Context, t *testing.T) {
 	conn, err := grpc.Dial("localhost:5568", grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		t.Fatal(err)
@@ -61,19 +83,19 @@ func testServerStreamingRPC(ctx context.Context, t *testing.T) {
 
 	tests := []struct{
 		name        string
-		request     *pb.Ping
-		want        []*pb.Pong
+		requests    []*pb.Ping
+		want        *pb.Pong
 		wantHeader  metadata.MD
 		wantTrailer metadata.MD
 		wantErr     error
 	} {
 		{
 			name: "Success",
-			request: &pb.Ping{Ping: "success"},
-			want: []*pb.Pong{
-				{Pong: "你好，世界"},
-				{Pong: "你好，世界"},
+			requests: []*pb.Ping{
+				{Ping: "success"},
+				{Ping: "success"},
 			},
+			want: &pb.Pong{Pong: "你好，世界"},
 			wantHeader: metadata.New(map[string]string{
 				"symbol": "-_.~!#$&'()*+,/:;=?@[]%20",
 				"content-type": "application/grpc",
@@ -81,12 +103,16 @@ func testServerStreamingRPC(ctx context.Context, t *testing.T) {
 			wantTrailer: metadata.New(map[string]string{
 				"symbol": "-_.~!#$&'()*+,/:;=?@[]%20",
 			}),
-			wantErr: io.EOF,
+			wantErr: nil,
 		},
 		{
 			name: "Failure",
-			request: &pb.Ping{Ping: "failure"},
-			want: []*pb.Pong{},
+			requests: []*pb.Ping{
+				{Ping: "failure"},
+				{Ping: "failure"},
+				{Ping: "failure"},
+			},
+			want: nil,
 			wantHeader: metadata.New(map[string]string{
 				"symbol": "-_.~!#$&'()*+,/:;=?@[]%20",
 				"content-type": "application/grpc",
@@ -123,23 +149,23 @@ func testServerStreamingRPC(ctx context.Context, t *testing.T) {
 
 		t.Run(tt.name, func(t *testing.T) {
 			var header, trailer metadata.MD
-			var pong *pb.Pong
-			var got []*pb.Pong
+			var got *pb.Pong
 
-			stream, err := client.PingPongPong(
+			stream, err := client.PingPingPong(
 				ctx,
-				tt.request,
 				grpc.Header(&header),
 				grpc.Trailer(&trailer),
 			)
 			if err == nil {
-				for {
-					pong, err = stream.Recv()
+				for _, request := range tt.requests {
+					err = stream.Send(request)
 					if err != nil {
 						break
 					}
+				}
 
-					got = append(got, pong)
+				if err == nil {
+					got, err = stream.CloseAndRecv()
 				}
 			}
 
@@ -150,10 +176,10 @@ func testServerStreamingRPC(ctx context.Context, t *testing.T) {
 			if !reflect.DeepEqual(header, tt.wantHeader) {
 				t.Errorf("header not equal, want: %s, got: %s", tt.wantHeader, header)
 			}
-			if !isSliceEqual(got, tt.want) {
+			if !proto.Equal(got, tt.want) {
 				t.Errorf(
 					"response not equal, want: %s, got: %s",
-					formatSlice(tt.want), formatSlice(got),
+					prototext.Format(tt.want), prototext.Format(got),
 				)
 			}
 			if !reflect.DeepEqual(trailer, tt.wantTrailer) {
@@ -163,17 +189,17 @@ func testServerStreamingRPC(ctx context.Context, t *testing.T) {
 	}
 }
 
-func TestServerStreamingRPC(t *testing.T) {
+func TestClientStreamingRPC(t *testing.T) {
 	ctx := context.Background()
-	testServerStreamingRPC(ctx, t)
+	testClientStreamingRPC(ctx, t)
 }
 
-func TestServerStreamingRPCProxyOnce(t *testing.T) {
+func TestClientStreamingRPCProxyOnce(t *testing.T) {
 	lis, err := net.Listen("tcp", "localhost:5569")
 	if err != nil {
 		t.Fatal(err)
 	}
-	s := &serverStreamingRPCServer{}
+	s := &clientStreamingRPCServer{}
 	grpcServer := grpc.NewServer()
 	pb.RegisterServiceServer(grpcServer, s)
 	go func() {
@@ -187,7 +213,8 @@ func TestServerStreamingRPCProxyOnce(t *testing.T) {
 
 	ctx := context.Background()
 	ctx = metadata.AppendToOutgoingContext(ctx, "proxy-mode", "proxyOnce")
-	testServerStreamingRPC(ctx, t)
+	testClientStreamingRPC(ctx, t)
+	s.ignore = true
+	testClientStreamingRPC(ctx, t)
 	grpcServer.GracefulStop()
-	testServerStreamingRPC(ctx, t)
 }

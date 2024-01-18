@@ -224,7 +224,7 @@ func (s *Service)HandleStreamCall(srv any, stream grpc.ServerStream) error {
 				proxyCallbackURL = mbResp.ProxyCallbackURL
 			} else if !mbResp.Response.IsEmpty() {
 				lastMessage = nil
-				log.Println(mbResp.Response)
+				log.Println("here", mbResp.Response)
 
 				err = serverStream.SendMsg(
 					mbResp.Response.Header,
@@ -251,5 +251,5 @@ func (s *Service)HandleStreamCall(srv any, stream grpc.ServerStream) error {
 		}
 	}
 
-	return status.Error(codes.Internal, "no responses any more")
+	return status.Error(codes.Internal, "no response from proxied server or mountebank any more")
 }
