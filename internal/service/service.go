@@ -131,14 +131,16 @@ func (s *Service)HandleStreamCall(srv any, stream grpc.ServerStream) error {
 
 	rpcData := mountebank.NewRpcData(method)
 
-	for serverStream != nil || clientStream != nil {
-		select {
-		case request, ok := <-serverStream.Requests():
-			if !ok {
-				serverStream = nil
-				continue
+	for {
+		if !serverStream.HasRequest() {
+			err := clientStream.CloseSend()
+			if err != nil {
+				return err
 			}
+		}
 
+		select {
+		case request := <-serverStream.Requests():
 			if request.Status != nil {
 				return request.Status.Err()
 			}
@@ -150,12 +152,7 @@ func (s *Service)HandleStreamCall(srv any, stream grpc.ServerStream) error {
 
 			lastMessage = request.Message
 
-		case response, ok := <-clientStream.Responses():
-			if !ok {
-				clientStream = nil
-				continue
-			}
-
+		case response := <-clientStream.Responses():
 			if proxyCallbackURL == "" {
 				return fmt.Errorf("unexpected response from proxied server: %+v", response)
 			}
@@ -254,5 +251,5 @@ func (s *Service)HandleStreamCall(srv any, stream grpc.ServerStream) error {
 		}
 	}
 
-	return fmt.Errorf("shoud not be here")
+	return status.Error(codes.Internal, "no responses any more")
 }

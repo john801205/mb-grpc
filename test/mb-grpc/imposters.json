@@ -34,7 +34,10 @@
 									"proxy-mode": [
 										"proxyOnce"
 									]
-								}
+								},
+								"messages": [{
+									"type": "request"
+								}]
 							}
 						}
 					],
@@ -103,6 +106,93 @@
 						{
 							"equals": {
 								"method": "/pingpong.Service/PingPong",
+								"messages": [{
+									"type": "request",
+									"value": {
+										"ping": "failure"
+									}
+								}]
+							}
+						}
+					],
+					"caseSensitive": false
+				},
+				{
+					"responses": [
+						{
+							"is": {
+								"header": {
+									"symbol": ["-_.~!#$&'()*+,/:;=?@[]%20"]
+								}
+							}
+						},
+						{
+							"is": {
+								"message": {
+									"pong": "你好，世界"
+								}
+							},
+							"repeat": 2
+						},
+						{
+							"is": {
+								"trailer": {
+									"symbol": ["-_.~!#$&'()*+,/:;=?@[]%20"]
+								},
+								"status": {
+									"code": "OK"
+								}
+							}
+						}
+					],
+					"predicates": [
+						{
+							"equals": {
+								"method": "/pingpong.Service/PingPongPong",
+								"messages": [{
+									"type": "request",
+									"value": {
+										"ping": "success"
+									}
+								}]
+							}
+						}
+					],
+					"caseSensitive": false
+				},
+				{
+					"responses": [
+						{
+							"is": {
+								"header": {
+									"symbol": ["-_.~!#$&'()*+,/:;=?@[]%20"]
+								}
+							}
+						},
+						{
+							"is": {
+								"trailer": {
+									"symbol": ["-_.~!#$&'()*+,/:;=?@[]%20"]
+								},
+								"status": {
+									"code": "INTERNAL",
+									"message": "message",
+									"details": [
+										{
+											"type": "pingpong.Pong",
+											"value": {
+												"pong": "你好，世界"
+											}
+										}
+									]
+								}
+							}
+						}
+					],
+					"predicates": [
+						{
+							"equals": {
+								"method": "/pingpong.Service/PingPongPong",
 								"messages": [{
 									"type": "request",
 									"value": {

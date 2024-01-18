@@ -17,6 +17,7 @@ type ClientStream struct {
 	stream      grpc.ClientStream
 	messageDesc protoreflect.MessageDescriptor
 	responseCh  chan *StreamData
+	hasResponse bool
 }
 
 func NewClientStream(
@@ -41,14 +42,27 @@ func NewClientStream(
 		stream:      stream,
 		messageDesc: messageDesc,
 		responseCh:  make(chan *StreamData),
+		hasResponse: true,
 	}
 	go clientStream.fetchResponses()
 
 	return clientStream, nil
 }
 
-func (s *ClientStream) Responses() <-chan *StreamData {
+func (s *ClientStream) CloseSend() error {
 	if s == nil {
+		return nil
+	}
+
+	return s.stream.CloseSend()
+}
+
+func (s *ClientStream) HasResponse() bool {
+	return s != nil && s.hasResponse
+}
+
+func (s *ClientStream) Responses() <-chan *StreamData {
+	if !s.HasResponse() {
 		return nil
 	}
 
@@ -64,12 +78,16 @@ func (s *ClientStream) Forward(message any) error {
 }
 
 func (s *ClientStream) fetchResponses() {
-	defer close(s.responseCh)
+	defer func() {
+		close(s.responseCh)
+		s.hasResponse = false
+	}()
 
 	header, err := s.stream.Header()
 	if err != nil {
 		st := status.Convert(err)
 		resp := &StreamData{
+			Header: header,
 			Status: st,
 		}
 

@@ -17,6 +17,7 @@ type ServerStream struct {
 	messageDesc protoreflect.MessageDescriptor
 	stream      grpc.ServerStream
 	requestCh   chan *StreamData
+	hasRequest  bool
 }
 
 func NewServerStream(ctx context.Context, stream grpc.ServerStream, messageDesc protoreflect.MessageDescriptor) *ServerStream {
@@ -25,14 +26,19 @@ func NewServerStream(ctx context.Context, stream grpc.ServerStream, messageDesc 
 		stream: stream,
 		messageDesc: messageDesc,
 		requestCh: make(chan *StreamData),
+		hasRequest: true,
 	}
 	go serverStream.fetchRequests()
 
 	return serverStream
 }
 
+func (s *ServerStream) HasRequest() bool {
+	return s != nil && s.hasRequest
+}
+
 func (s *ServerStream) Requests() <-chan *StreamData {
-	if s == nil {
+	if !s.HasRequest() {
 		return nil
 	}
 
@@ -63,7 +69,10 @@ func (s *ServerStream) SendMsg(header, trailer metadata.MD, message any) error {
 }
 
 func (s *ServerStream) fetchRequests() {
-	defer close(s.requestCh)
+	defer func() {
+		close(s.requestCh)
+		s.hasRequest = false
+	}()
 
 	md, exist := metadata.FromIncomingContext(s.stream.Context())
 	if exist {

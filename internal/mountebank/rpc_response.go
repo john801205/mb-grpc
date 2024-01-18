@@ -94,9 +94,13 @@ func convert(r *rpcResponse, desc protoreflect.MessageDescriptor) (*RpcResponse,
 }
 
 func (r *RpcResponse) MarshalJSON() ([]byte, error) {
-	message, err := protojson.Marshal(r.Message)
-	if err != nil {
-		return nil, err
+	var message json.RawMessage
+	var err error
+	if r.Message != nil {
+		message, err = protojson.Marshal(r.Message)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	var st *rpcStatus
@@ -128,11 +132,13 @@ func (r *RpcResponse) MarshalJSON() ([]byte, error) {
 		}
 	}
 
-	r.Trailer.Delete("grpc-status-details-bin")
+	header := r.Header.Copy()
+	trailer := r.Trailer.Copy()
+	trailer.Delete("grpc-status-details-bin")
 	resp := &rpcResponse{
-		Header:  r.Header,
+		Header:  header,
 		Message: message,
-		Trailer: r.Trailer,
+		Trailer: trailer,
 		Status:  st,
 	}
 
