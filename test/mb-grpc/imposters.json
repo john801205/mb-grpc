@@ -1,0 +1,120 @@
+{
+	"imposters": [
+		{
+			"port": 5568,
+			"protocol": "grpc",
+			"recordRequests": true,
+			"options": {
+				"protoc": {
+					"protoFiles": ["pingpong/pingpong.proto"]
+				}
+			},
+			"stubs": [
+				{
+					"responses": [
+						{
+							"proxy": {
+								"to": "localhost:5569",
+								"mode": "proxyOnce",
+								"predicateGenerators": [{
+									"matches": {
+										"method": true,
+										"messages": true,
+										"requestHeader": true,
+										"responseHeader": true
+									}
+								}]
+							}
+						}
+					],
+					"predicates": [
+						{
+							"equals": {
+								"requestHeader": {
+									"proxy-mode": [
+										"proxyOnce"
+									]
+								}
+							}
+						}
+					],
+					"caseSensitive": false
+				},
+				{
+					"responses": [
+						{
+							"is": {
+								"header": {
+									"aaaa": ["bbb"]
+								},
+								"message": {
+									"pong": "Hello, world"
+								},
+								"trailer": {
+									"bbbb": ["aaa"]
+								},
+								"status": {
+									"code": "OK"
+								}
+							}
+						}
+					],
+					"predicates": [
+						{
+							"equals": {
+								"method": "/pingpong.Service/PingPong",
+								"messages": [{
+									"type": "request",
+									"value": {
+										"ping": "success"
+									}
+								}]
+							}
+						}
+					],
+					"caseSensitive": false
+				},
+				{
+					"responses": [
+						{
+							"is": {
+								"header": {
+									"aaaa": ["bbb"]
+								},
+								"trailer": {
+									"bbbb": ["aaa"]
+								},
+								"status": {
+									"code": "ABORTED",
+									"message": "message",
+									"details": [
+										{
+											"type": "pingpong.Pong",
+											"value": {
+												"pong": "Hello, world"
+											}
+										}
+									]
+								}
+							}
+						}
+					],
+					"predicates": [
+						{
+							"equals": {
+								"method": "/pingpong.Service/PingPong",
+								"messages": [{
+									"type": "request",
+									"value": {
+										"ping": "failure"
+									}
+								}]
+							}
+						}
+					],
+					"caseSensitive": false
+				}
+			]
+		}
+	]
+}

@@ -11,6 +11,7 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/encoding/prototext"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/dynamicpb"
 
@@ -59,7 +60,7 @@ func (s *Service)HandleUnaryCall(srv any, ctx context.Context, dec func(any) err
 		return nil, err
 	}
 
-	log.Println("request", rpcData)
+	log.Println("request", rpcData, prototext.Format(request))
 
 	mbResp, err := s.mbClient.GetResponse(intCtx, rpcData, methodDesc.Output())
 	if err != nil {
