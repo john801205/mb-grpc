@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"io"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -132,17 +133,34 @@ func (s *Service)HandleStreamCall(srv any, stream grpc.ServerStream) error {
 	rpcData := mountebank.NewRpcData(method)
 
 	for {
-		if !serverStream.HasRequest() {
-			err := clientStream.CloseSend()
-			if err != nil {
-				return err
-			}
-		}
-
 		select {
 		case request := <-serverStream.Requests():
-			if request.Status != nil {
-				return request.Status.Err()
+			if request.Error != nil {
+				serverStream.WaitFinished()
+			}
+
+			if request.Error == io.EOF {
+				err := clientStream.CloseSend()
+				if err != nil {
+					return err
+				}
+				continue
+			} else if request.Error != nil {
+				return request.Error
+			}
+
+			if proxyCallbackURL != "" {
+				rpcResp := &mountebank.RpcResponse{}
+				_, err := s.mbClient.SaveProxyResponse(
+					intCtx,
+					proxyCallbackURL,
+					rpcResp,
+					methodDesc.Output(),
+				)
+				if err != nil {
+					return err
+				}
+				proxyCallbackURL = ""
 			}
 
 			err := rpcData.AddRequestData(request.Header, request.Message)
@@ -157,11 +175,22 @@ func (s *Service)HandleStreamCall(srv any, stream grpc.ServerStream) error {
 				return fmt.Errorf("unexpected response from proxied server: %+v", response)
 			}
 
+			if response.Error != nil {
+				clientStream.WaitFinished()
+			}
+
+			var st *status.Status
+			if response.Error == io.EOF {
+				st = status.New(codes.OK, "")
+			} else if response.Error != nil {
+				st = status.Convert(response.Error)
+			}
+
 			rpcResp := &mountebank.RpcResponse{
 				Header: response.Header,
 				Message: response.Message,
 				Trailer: response.Trailer,
-				Status: response.Status,
+				Status: st,
 			}
 
 			log.Println("client resp", rpcResp)
@@ -177,8 +206,8 @@ func (s *Service)HandleStreamCall(srv any, stream grpc.ServerStream) error {
 				return err
 			}
 
-			if response.Status != nil {
-				return response.Status.Err()
+			if st != nil {
+				return st.Err()
 			}
 
 			err = rpcData.AddResponseData(response.Header, response.Message)

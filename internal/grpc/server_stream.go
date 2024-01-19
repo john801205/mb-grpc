@@ -2,7 +2,6 @@ package grpc
 
 import (
 	"context"
-	"io"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -17,7 +16,7 @@ type ServerStream struct {
 	messageDesc protoreflect.MessageDescriptor
 	stream      grpc.ServerStream
 	requestCh   chan *StreamData
-	hasRequest  bool
+	done        chan struct{}
 }
 
 func NewServerStream(ctx context.Context, stream grpc.ServerStream, messageDesc protoreflect.MessageDescriptor) *ServerStream {
@@ -26,19 +25,34 @@ func NewServerStream(ctx context.Context, stream grpc.ServerStream, messageDesc 
 		stream: stream,
 		messageDesc: messageDesc,
 		requestCh: make(chan *StreamData),
-		hasRequest: true,
+		done: make(chan struct{}),
 	}
 	go serverStream.fetchRequests()
 
 	return serverStream
 }
 
-func (s *ServerStream) HasRequest() bool {
-	return s != nil && s.hasRequest
+func (s *ServerStream) hasRequest() bool {
+	if s == nil {
+		return false
+	}
+
+	running := true
+	select {
+	case <-s.done:
+		running = false
+	default:
+	}
+
+	return running || len(s.requestCh) != 0
+}
+
+func (s *ServerStream) WaitFinished() {
+	<-s.done
 }
 
 func (s *ServerStream) Requests() <-chan *StreamData {
-	if !s.HasRequest() {
+	if !s.hasRequest() {
 		return nil
 	}
 
@@ -70,8 +84,8 @@ func (s *ServerStream) SendMsg(header, trailer metadata.MD, message any) error {
 
 func (s *ServerStream) fetchRequests() {
 	defer func() {
+		close(s.done)
 		close(s.requestCh)
-		s.hasRequest = false
 	}()
 
 	md, exist := metadata.FromIncomingContext(s.stream.Context())
@@ -92,11 +106,9 @@ func (s *ServerStream) fetchRequests() {
 		err := s.stream.RecvMsg(request)
 		var req *StreamData
 
-		if err == io.EOF {
-			return
-		} else if err != nil {
+		if err != nil {
 			req = &StreamData{
-				Status: status.Convert(err),
+				Error: err,
 			}
 		} else {
 			req = &StreamData{

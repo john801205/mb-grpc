@@ -2,7 +2,6 @@ package grpc
 
 import (
 	"context"
-	"io"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -17,7 +16,7 @@ type ClientStream struct {
 	stream      grpc.ClientStream
 	messageDesc protoreflect.MessageDescriptor
 	responseCh  chan *StreamData
-	hasResponse bool
+	done        chan struct{}
 }
 
 func NewClientStream(
@@ -42,7 +41,7 @@ func NewClientStream(
 		stream:      stream,
 		messageDesc: messageDesc,
 		responseCh:  make(chan *StreamData),
-		hasResponse: true,
+		done:        make(chan struct{}),
 	}
 	go clientStream.fetchResponses()
 
@@ -57,12 +56,27 @@ func (s *ClientStream) CloseSend() error {
 	return s.stream.CloseSend()
 }
 
-func (s *ClientStream) HasResponse() bool {
-	return s != nil && s.hasResponse
+func (s *ClientStream) hasResponse() bool {
+	if s == nil {
+		return false
+	}
+
+	running := true
+	select {
+	case <-s.done:
+		running = false
+	default:
+	}
+
+	return running || len(s.responseCh) != 0
+}
+
+func (s *ClientStream) WaitFinished() {
+	<-s.done
 }
 
 func (s *ClientStream) Responses() <-chan *StreamData {
-	if !s.HasResponse() {
+	if !s.hasResponse() {
 		return nil
 	}
 
@@ -79,16 +93,15 @@ func (s *ClientStream) Forward(message any) error {
 
 func (s *ClientStream) fetchResponses() {
 	defer func() {
+		close(s.done)
 		close(s.responseCh)
-		s.hasResponse = false
 	}()
 
 	header, err := s.stream.Header()
 	if err != nil {
-		st := status.Convert(err)
 		resp := &StreamData{
 			Header: header,
-			Status: st,
+			Error:  err,
 		}
 
 		select {
@@ -104,17 +117,11 @@ func (s *ClientStream) fetchResponses() {
 		err := s.stream.RecvMsg(message)
 		var resp *StreamData
 
-		if err == io.EOF {
+		if err != nil {
 			resp = &StreamData{
 				Header: header,
 				Trailer: s.stream.Trailer(),
-				Status:  status.New(codes.OK, ""),
-			}
-		} else if err != nil {
-			resp = &StreamData{
-				Header: header,
-				Trailer: s.stream.Trailer(),
-				Status:  status.Convert(err),
+				Error:  err,
 			}
 		} else {
 			resp = &StreamData{

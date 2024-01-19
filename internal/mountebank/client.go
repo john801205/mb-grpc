@@ -83,7 +83,7 @@ func (c *Client) GetResponse(
 		return nil, err
 	}
 
-	log.Println("mb", string(httpBody))
+	log.Println("mb", request, string(httpBody))
 
 	temp := &getResponseResponse{}
 	err = json.Unmarshal(httpBody, temp)

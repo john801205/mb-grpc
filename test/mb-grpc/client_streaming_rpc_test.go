@@ -20,8 +20,6 @@ import (
 
 type clientStreamingRPCServer struct {
 	pb.UnimplementedServiceServer
-
-	ignore bool
 }
 
 func (s *clientStreamingRPCServer) PingPingPong(stream pb.Service_PingPingPongServer) error {
@@ -33,12 +31,6 @@ func (s *clientStreamingRPCServer) PingPingPong(stream pb.Service_PingPingPongSe
 	ping, err := stream.Recv()
 	if err != nil {
 		return err
-	}
-	for s.ignore {
-		ping, err = stream.Recv()
-		if err != nil {
-			return err
-		}
 	}
 
 	if ping.Ping == "success" {
@@ -214,7 +206,6 @@ func TestClientStreamingRPCProxyOnce(t *testing.T) {
 	ctx := context.Background()
 	ctx = metadata.AppendToOutgoingContext(ctx, "proxy-mode", "proxyOnce")
 	testClientStreamingRPC(ctx, t)
-	s.ignore = true
-	testClientStreamingRPC(ctx, t)
 	grpcServer.GracefulStop()
+	testClientStreamingRPC(ctx, t)
 }
