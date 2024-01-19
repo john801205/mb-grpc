@@ -71,15 +71,18 @@ func (s *ServerStream) SendMsg(header, trailer metadata.MD, message any) error {
 		}
 	}
 
+	if message != nil {
+		err := s.stream.SendMsg(message)
+		if err != nil {
+			return err
+		}
+	}
+
 	if len(trailer) != 0 {
 		s.stream.SetTrailer(trailer)
 	}
 
-	if message == nil {
-		return nil
-	}
-
-	return s.stream.SendMsg(message)
+	return nil
 }
 
 func (s *ServerStream) fetchRequests() {

@@ -48,7 +48,10 @@ func testUnaryRPC(ctx context.Context, t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() {
-		conn.Close()
+		err := conn.Close()
+		if err != nil {
+			t.Error(err)
+		}
 	})
 
 	client := pb.NewServiceClient(conn)
