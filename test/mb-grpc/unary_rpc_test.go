@@ -23,9 +23,9 @@ type unaryRPCServer struct {
 }
 
 func (s *unaryRPCServer) PingPong(ctx context.Context, req *pb.Ping) (*pb.Pong, error) {
-	header := metadata.Pairs("aaaa", "bbb")
+	header := metadata.Pairs("aaaa", "bbb", "mb-grpc-data-bin", "いちばん")
 	grpc.SetHeader(ctx, header)
-	trailer := metadata.Pairs("bbbb", "aaa")
+	trailer := metadata.Pairs("bbbb", "aaa", "mb-grpc-data-bin", "いちばん")
 	grpc.SetTrailer(ctx, trailer)
 
 	if req.Ping == "success" {
@@ -69,11 +69,13 @@ func testUnaryRPC(ctx context.Context, t *testing.T) {
 			request: &pb.Ping{Ping: "success"},
 			want:    &pb.Pong{Pong: "Hello, world"},
 			wantHeader: metadata.New(map[string]string{
-				"aaaa":         "bbb",
-				"content-type": "application/grpc",
+				"aaaa":             "bbb",
+				"mb-grpc-data-bin": "いちばん",
+				"content-type":     "application/grpc",
 			}),
 			wantTrailer: metadata.New(map[string]string{
-				"bbbb": "aaa",
+				"bbbb":             "aaa",
+				"mb-grpc-data-bin": "いちばん",
 			}),
 			wantErr: nil,
 		},
@@ -81,12 +83,14 @@ func testUnaryRPC(ctx context.Context, t *testing.T) {
 			name:    "Failure",
 			request: &pb.Ping{Ping: "failure"},
 			wantHeader: metadata.New(map[string]string{
-				"aaaa":         "bbb",
-				"content-type": "application/grpc",
+				"aaaa":             "bbb",
+				"mb-grpc-data-bin": "いちばん",
+				"content-type":     "application/grpc",
 			}),
 			wantTrailer: func() metadata.MD {
 				md := metadata.New(map[string]string{
-					"bbbb": "aaa",
+					"bbbb":             "aaa",
+					"mb-grpc-data-bin": "いちばん",
 				})
 				st := status.New(codes.Aborted, "message")
 				st, err := st.WithDetails(&pb.Pong{Pong: "Hello, world"})

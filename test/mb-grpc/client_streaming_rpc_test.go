@@ -23,9 +23,9 @@ type clientStreamingRPCServer struct {
 }
 
 func (s *clientStreamingRPCServer) PingPingPong(stream pb.Service_PingPingPongServer) error {
-	header := metadata.Pairs("symbol", "-_.~!#$&'()*+,/:;=?@[]%20")
+	header := metadata.Pairs("symbol", "-_.~!#$&'()*+,/:;=?@[]%20", "mb-grpc-data-bin", "いちばん")
 	stream.SetHeader(header)
-	trailer := metadata.Pairs("symbol", "-_.~!#$&'()*+,/:;=?@[]%20")
+	trailer := metadata.Pairs("symbol", "-_.~!#$&'()*+,/:;=?@[]%20", "mb-grpc-data-bin", "いちばん")
 	stream.SetTrailer(trailer)
 
 	ping, err := stream.Recv()
@@ -92,11 +92,13 @@ func testClientStreamingRPC(ctx context.Context, t *testing.T) {
 			},
 			want: &pb.Pong{Pong: "你好，世界"},
 			wantHeader: metadata.New(map[string]string{
-				"symbol":       "-_.~!#$&'()*+,/:;=?@[]%20",
-				"content-type": "application/grpc",
+				"symbol":           "-_.~!#$&'()*+,/:;=?@[]%20",
+				"mb-grpc-data-bin": "いちばん",
+				"content-type":     "application/grpc",
 			}),
 			wantTrailer: metadata.New(map[string]string{
-				"symbol": "-_.~!#$&'()*+,/:;=?@[]%20",
+				"symbol":           "-_.~!#$&'()*+,/:;=?@[]%20",
+				"mb-grpc-data-bin": "いちばん",
 			}),
 			wantErr: nil,
 		},
@@ -109,12 +111,14 @@ func testClientStreamingRPC(ctx context.Context, t *testing.T) {
 			},
 			want: nil,
 			wantHeader: metadata.New(map[string]string{
-				"symbol":       "-_.~!#$&'()*+,/:;=?@[]%20",
-				"content-type": "application/grpc",
+				"symbol":           "-_.~!#$&'()*+,/:;=?@[]%20",
+				"mb-grpc-data-bin": "いちばん",
+				"content-type":     "application/grpc",
 			}),
 			wantTrailer: func() metadata.MD {
 				md := metadata.New(map[string]string{
-					"symbol": "-_.~!#$&'()*+,/:;=?@[]%20",
+					"symbol":           "-_.~!#$&'()*+,/:;=?@[]%20",
+					"mb-grpc-data-bin": "いちばん",
 				})
 				st := status.New(codes.Internal, "message")
 				st, err := st.WithDetails(&pb.Pong{Pong: "你好，世界"})

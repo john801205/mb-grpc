@@ -72,13 +72,15 @@
 						{
 							"is": {
 								"header": {
-									"aaaa": ["bbb"]
+									"aaaa": ["bbb"],
+									"mb-grpc-data-bin": ["44GE44Gh44Gw44KT"]
 								},
 								"message": {
 									"pong": "Hello, world"
 								},
 								"trailer": {
-									"bbbb": ["aaa"]
+									"bbbb": ["aaa"],
+									"mb-grpc-data-bin": ["44GE44Gh44Gw44KT"]
 								},
 								"status": {
 									"code": "OK"
@@ -106,10 +108,12 @@
 						{
 							"is": {
 								"header": {
-									"aaaa": ["bbb"]
+									"aaaa": ["bbb"],
+									"mb-grpc-data-bin": ["44GE44Gh44Gw44KT"]
 								},
 								"trailer": {
-									"bbbb": ["aaa"]
+									"bbbb": ["aaa"],
+									"mb-grpc-data-bin": ["44GE44Gh44Gw44KT"]
 								},
 								"status": {
 									"code": "ABORTED",
@@ -146,7 +150,8 @@
 						{
 							"is": {
 								"header": {
-									"symbol": ["-_.~!#$&'()*+,/:;=?@[]%20"]
+									"symbol": ["-_.~!#$&'()*+,/:;=?@[]%20"],
+									"mb-grpc-data-bin": ["44GE44Gh44Gw44KT"]
 								}
 							}
 						},
@@ -161,7 +166,8 @@
 						{
 							"is": {
 								"trailer": {
-									"symbol": ["-_.~!#$&'()*+,/:;=?@[]%20"]
+									"symbol": ["-_.~!#$&'()*+,/:;=?@[]%20"],
+									"mb-grpc-data-bin": ["44GE44Gh44Gw44KT"]
 								},
 								"status": {
 									"code": "OK"
@@ -189,14 +195,16 @@
 						{
 							"is": {
 								"header": {
-									"symbol": ["-_.~!#$&'()*+,/:;=?@[]%20"]
+									"symbol": ["-_.~!#$&'()*+,/:;=?@[]%20"],
+									"mb-grpc-data-bin": ["44GE44Gh44Gw44KT"]
 								}
 							}
 						},
 						{
 							"is": {
 								"trailer": {
-									"symbol": ["-_.~!#$&'()*+,/:;=?@[]%20"]
+									"symbol": ["-_.~!#$&'()*+,/:;=?@[]%20"],
+									"mb-grpc-data-bin": ["44GE44Gh44Gw44KT"]
 								},
 								"status": {
 									"code": "INTERNAL",
@@ -233,13 +241,15 @@
 						{
 							"is": {
 								"header": {
-									"symbol": ["-_.~!#$&'()*+,/:;=?@[]%20"]
+									"symbol": ["-_.~!#$&'()*+,/:;=?@[]%20"],
+									"mb-grpc-data-bin": ["44GE44Gh44Gw44KT"]
 								},
 								"message": {
 									"pong": "你好，世界"
 								},
 								"trailer": {
-									"symbol": ["-_.~!#$&'()*+,/:;=?@[]%20"]
+									"symbol": ["-_.~!#$&'()*+,/:;=?@[]%20"],
+									"mb-grpc-data-bin": ["44GE44Gh44Gw44KT"]
 								},
 								"status": {
 									"code": "OK"
@@ -275,10 +285,12 @@
 						{
 							"is": {
 								"header": {
-									"symbol": ["-_.~!#$&'()*+,/:;=?@[]%20"]
+									"symbol": ["-_.~!#$&'()*+,/:;=?@[]%20"],
+									"mb-grpc-data-bin": ["44GE44Gh44Gw44KT"]
 								},
 								"trailer": {
-									"symbol": ["-_.~!#$&'()*+,/:;=?@[]%20"]
+									"symbol": ["-_.~!#$&'()*+,/:;=?@[]%20"],
+									"mb-grpc-data-bin": ["44GE44Gh44Gw44KT"]
 								},
 								"status": {
 									"code": "INTERNAL",
@@ -329,7 +341,8 @@
 						{
 							"is": {
 								"header": {
-									"symbol": ["-_.~!#$&'()*+,/:;=?@[]%20"]
+									"symbol": ["-_.~!#$&'()*+,/:;=?@[]%20"],
+									"mb-grpc-data-bin": ["44GE44Gh44Gw44KT"]
 								},
 								"message": {
 									"pong": "你好，世界"
@@ -346,7 +359,8 @@
 						{
 							"is": {
 								"trailer": {
-									"symbol": ["-_.~!#$&'()*+,/:;=?@[]%20"]
+									"symbol": ["-_.~!#$&'()*+,/:;=?@[]%20"],
+									"mb-grpc-data-bin": ["44GE44Gh44Gw44KT"]
 								},
 								"status": {
 									"code": "OK"
@@ -449,7 +463,8 @@
 						{
 							"is": {
 								"header": {
-									"symbol": ["-_.~!#$&'()*+,/:;=?@[]%20"]
+									"symbol": ["-_.~!#$&'()*+,/:;=?@[]%20"],
+									"mb-grpc-data-bin": ["44GE44Gh44Gw44KT"]
 								},
 								"message": {
 									"pong": "你好，世界"
@@ -470,7 +485,8 @@
 									"pong": "你好，世界"
 								},
 								"trailer": {
-									"symbol": ["-_.~!#$&'()*+,/:;=?@[]%20"]
+									"symbol": ["-_.~!#$&'()*+,/:;=?@[]%20"],
+									"mb-grpc-data-bin": ["44GE44Gh44Gw44KT"]
 								},
 								"status": {
 									"code": "OK"
@@ -596,7 +612,8 @@
 						{
 							"is": {
 								"header": {
-									"symbol": ["-_.~!#$&'()*+,/:;=?@[]%20"]
+									"symbol": ["-_.~!#$&'()*+,/:;=?@[]%20"],
+									"mb-grpc-data-bin": ["44GE44Gh44Gw44KT"]
 								},
 								"message": {
 									"pong": "你好，世界"
@@ -613,7 +630,8 @@
 						{
 							"is": {
 								"trailer": {
-									"symbol": ["-_.~!#$&'()*+,/:;=?@[]%20"]
+									"symbol": ["-_.~!#$&'()*+,/:;=?@[]%20"],
+									"mb-grpc-data-bin": ["44GE44Gh44Gw44KT"]
 								},
 								"status": {
 									"code": "ABORTED",
@@ -725,7 +743,8 @@
 						{
 							"is": {
 								"header": {
-									"symbol": ["-_.~!#$&'()*+,/:;=?@[]%20"]
+									"symbol": ["-_.~!#$&'()*+,/:;=?@[]%20"],
+									"mb-grpc-data-bin": ["44GE44Gh44Gw44KT"]
 								},
 								"message": {
 									"pong": "你好，世界"
@@ -746,7 +765,8 @@
 									"pong": "你好，世界"
 								},
 								"trailer": {
-									"symbol": ["-_.~!#$&'()*+,/:;=?@[]%20"]
+									"symbol": ["-_.~!#$&'()*+,/:;=?@[]%20"],
+									"mb-grpc-data-bin": ["44GE44Gh44Gw44KT"]
 								},
 								"status": {
 									"code": "ABORTED",

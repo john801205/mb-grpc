@@ -1,7 +1,9 @@
 package mountebank
 
 import (
+	"encoding/base64"
 	"encoding/json"
+	"strings"
 
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/protobuf/encoding/protojson"
@@ -22,13 +24,22 @@ type RpcData struct {
 
 func NewRpcData(method string) *RpcData {
 	return &RpcData{
-		Method: method,
+		Method:         method,
+		RequestHeader:  metadata.New(nil),
+		ResponseHeader: metadata.New(nil),
 	}
 }
 
 func (d *RpcData) AddRequestData(header metadata.MD, message proto.Message) error {
-	if len(header) != 0 {
-		d.RequestHeader = metadata.Join(d.RequestHeader, header)
+	for key, vals := range header {
+		if strings.HasSuffix(key, "-bin") {
+			for _, val := range vals {
+				str := base64.StdEncoding.EncodeToString([]byte(val))
+				d.RequestHeader.Append(key, str)
+			}
+		} else {
+			d.RequestHeader.Append(key, vals...)
+		}
 	}
 
 	if message != nil {
@@ -47,8 +58,15 @@ func (d *RpcData) AddRequestData(header metadata.MD, message proto.Message) erro
 }
 
 func (d *RpcData) AddResponseData(header metadata.MD, message proto.Message) error {
-	if len(header) != 0 {
-		d.ResponseHeader = metadata.Join(d.ResponseHeader, header)
+	for key, vals := range header {
+		if strings.HasSuffix(key, "-bin") {
+			for _, val := range vals {
+				str := base64.StdEncoding.EncodeToString([]byte(val))
+				d.ResponseHeader.Append(key, str)
+			}
+		} else {
+			d.ResponseHeader.Append(key, vals...)
+		}
 	}
 
 	if message != nil {

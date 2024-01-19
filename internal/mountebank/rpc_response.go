@@ -1,8 +1,10 @@
 package mountebank
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"errors"
+	"strings"
 
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
@@ -85,10 +87,46 @@ func convert(r *rpcResponse, desc protoreflect.MessageDescriptor) (*RpcResponse,
 		}
 	}
 
+	var header, trailer metadata.MD
+	if len(r.Header) != 0 {
+		header = metadata.New(nil)
+	}
+	for key, vals := range r.Header {
+		if strings.HasSuffix(key, "-bin") {
+			for _, val := range vals {
+				decoded, err := base64.StdEncoding.DecodeString(val)
+				if err != nil {
+					return nil, err
+				}
+
+				header.Append(key, string(decoded))
+			}
+		} else {
+			header.Append(key, vals...)
+		}
+	}
+	if len(r.Trailer) != 0 {
+		trailer = metadata.New(nil)
+	}
+	for key, vals := range r.Trailer {
+		if strings.HasSuffix(key, "-bin") {
+			for _, val := range vals {
+				decoded, err := base64.StdEncoding.DecodeString(val)
+				if err != nil {
+					return nil, err
+				}
+
+				trailer.Append(key, string(decoded))
+			}
+		} else {
+			trailer.Append(key, vals...)
+		}
+	}
+
 	return &RpcResponse{
-		Header:  r.Header,
+		Header:  header,
 		Message: message,
-		Trailer: r.Trailer,
+		Trailer: trailer,
 		Status:  st,
 	}, nil
 }
@@ -133,7 +171,26 @@ func (r *RpcResponse) MarshalJSON() ([]byte, error) {
 	}
 
 	header := r.Header.Copy()
+	for key, vals := range r.Header {
+		if strings.HasSuffix(key, "-bin") {
+			header.Delete(key)
+			for _, val := range vals {
+				str := base64.StdEncoding.EncodeToString([]byte(val))
+				header.Append(key, str)
+			}
+		}
+	}
+
 	trailer := r.Trailer.Copy()
+	for key, vals := range r.Trailer {
+		if strings.HasSuffix(key, "-bin") {
+			trailer.Delete(key)
+			for _, val := range vals {
+				str := base64.StdEncoding.EncodeToString([]byte(val))
+				trailer.Append(key, str)
+			}
+		}
+	}
 	trailer.Delete("grpc-status-details-bin")
 	resp := &rpcResponse{
 		Header:  header,
