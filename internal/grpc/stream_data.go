@@ -11,4 +11,3 @@ type StreamData struct {
 	Trailer metadata.MD
 	Error   error
 }
-

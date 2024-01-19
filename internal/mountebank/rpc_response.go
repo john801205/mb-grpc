@@ -117,7 +117,7 @@ func (r *RpcResponse) MarshalJSON() ([]byte, error) {
 				}
 
 				details = append(details, &rpcStatusDetail{
-					Type: string(proto.MessageName(dd)),
+					Type:  string(proto.MessageName(dd)),
 					Value: bytes,
 				})
 			default:
@@ -147,7 +147,7 @@ func (r *RpcResponse) MarshalJSON() ([]byte, error) {
 
 func (r *RpcResponse) IsEmpty() bool {
 	if r == nil {
-		return true;
+		return true
 	}
 	return len(r.Header) == 0 && len(r.Trailer) == 0 && r.Message == nil && r.Status == nil
 }

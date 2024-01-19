@@ -4,8 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log"
 	"io"
+	"log"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -33,7 +33,7 @@ func New(registry *intProto.Registry, mbClient *mountebank.Client) *Service {
 	}
 }
 
-func (s *Service)HandleUnaryCall(srv any, ctx context.Context, dec func(any) error, interceptor grpc.UnaryServerInterceptor) (any, error) {
+func (s *Service) HandleUnaryCall(srv any, ctx context.Context, dec func(any) error, interceptor grpc.UnaryServerInterceptor) (any, error) {
 	intCtx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -83,10 +83,10 @@ func (s *Service)HandleUnaryCall(srv any, ctx context.Context, dec func(any) err
 		resp := dynamicpb.NewMessage(methodDesc.Output())
 		err = conn.Invoke(intCtx, method, request, resp, grpc.Header(&header), grpc.Trailer(&trailer))
 		rpcResp := &mountebank.RpcResponse{
-			Header: header,
+			Header:  header,
 			Message: resp,
 			Trailer: trailer,
-			Status: status.Convert(err),
+			Status:  status.Convert(err),
 		}
 
 		mbResp, err = s.mbClient.SaveProxyResponse(intCtx, mbResp.ProxyCallbackURL, rpcResp, methodDesc.Output())
@@ -111,7 +111,7 @@ func (s *Service)HandleUnaryCall(srv any, ctx context.Context, dec func(any) err
 	return mbResp.Response.Message, mbResp.Response.Status.Err()
 }
 
-func (s *Service)HandleStreamCall(srv any, stream grpc.ServerStream) error {
+func (s *Service) HandleStreamCall(srv any, stream grpc.ServerStream) error {
 	intCtx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -187,10 +187,10 @@ func (s *Service)HandleStreamCall(srv any, stream grpc.ServerStream) error {
 			}
 
 			rpcResp := &mountebank.RpcResponse{
-				Header: response.Header,
+				Header:  response.Header,
 				Message: response.Message,
 				Trailer: response.Trailer,
-				Status: st,
+				Status:  st,
 			}
 
 			log.Println("client resp", rpcResp)
@@ -228,8 +228,8 @@ func (s *Service)HandleStreamCall(srv any, stream grpc.ServerStream) error {
 				if clientStream == nil {
 					var err error
 					streamDesc := grpc.StreamDesc{
-						StreamName: method,
-						Handler: s.HandleStreamCall,
+						StreamName:    method,
+						Handler:       s.HandleStreamCall,
 						ServerStreams: methodDesc.IsStreamingServer(),
 						ClientStreams: methodDesc.IsStreamingClient(),
 					}

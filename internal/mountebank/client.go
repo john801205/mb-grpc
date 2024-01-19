@@ -99,8 +99,8 @@ func (c *Client) GetResponse(
 	}
 
 	return &GetResponseResponse{
-		Response: resp,
-		Proxy: temp.Proxy,
+		Response:         resp,
+		Proxy:            temp.Proxy,
 		ProxyCallbackURL: temp.ProxyCallbackURL,
 	}, nil
 }

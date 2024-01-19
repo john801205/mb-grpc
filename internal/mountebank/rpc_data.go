@@ -14,10 +14,10 @@ type RpcMessage struct {
 }
 
 type RpcData struct {
-	Method          string        `json:"method"`
-	RequestHeader   metadata.MD   `json:"requestHeader,omitempty"`
-	ResponseHeader  metadata.MD   `json:"responseHeader,omitempty"`
-	Messages        []*RpcMessage `json:"messages,omitempty"`
+	Method         string        `json:"method"`
+	RequestHeader  metadata.MD   `json:"requestHeader,omitempty"`
+	ResponseHeader metadata.MD   `json:"responseHeader,omitempty"`
+	Messages       []*RpcMessage `json:"messages,omitempty"`
 }
 
 func NewRpcData(method string) *RpcData {
@@ -38,7 +38,7 @@ func (d *RpcData) AddRequestData(header metadata.MD, message proto.Message) erro
 		}
 
 		d.Messages = append(d.Messages, &RpcMessage{
-			Type: "request",
+			Type:  "request",
 			Value: bytes,
 		})
 	}
@@ -58,7 +58,7 @@ func (d *RpcData) AddResponseData(header metadata.MD, message proto.Message) err
 		}
 
 		d.Messages = append(d.Messages, &RpcMessage{
-			Type: "response",
+			Type:  "response",
 			Value: bytes,
 		})
 	}

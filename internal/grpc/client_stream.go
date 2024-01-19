@@ -119,13 +119,13 @@ func (s *ClientStream) fetchResponses() {
 
 		if err != nil {
 			resp = &StreamData{
-				Header: header,
+				Header:  header,
 				Trailer: s.stream.Trailer(),
-				Error:  err,
+				Error:   err,
 			}
 		} else {
 			resp = &StreamData{
-				Header: header,
+				Header:  header,
 				Message: message,
 			}
 		}

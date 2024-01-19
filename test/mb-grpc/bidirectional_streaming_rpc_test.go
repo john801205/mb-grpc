@@ -108,14 +108,14 @@ func testBidirectionalStreamingRPC(ctx context.Context, t *testing.T) {
 
 	client := pb.NewServiceClient(conn)
 
-	tests := []struct{
+	tests := []struct {
 		name         string
 		header       metadata.MD
 		wantMessages []proto.Message
 		wantHeader   metadata.MD
 		wantTrailer  metadata.MD
 		wantErr      error
-	} {
+	}{
 		{
 			name: "Success - pingpongpongpingpingping",
 			header: metadata.Pairs(
@@ -130,7 +130,7 @@ func testBidirectionalStreamingRPC(ctx context.Context, t *testing.T) {
 				&pb.Ping{Ping: "success"},
 			},
 			wantHeader: metadata.New(map[string]string{
-				"symbol": "-_.~!#$&'()*+,/:;=?@[]%20",
+				"symbol":       "-_.~!#$&'()*+,/:;=?@[]%20",
 				"content-type": "application/grpc",
 			}),
 			wantTrailer: metadata.New(map[string]string{
@@ -152,7 +152,7 @@ func testBidirectionalStreamingRPC(ctx context.Context, t *testing.T) {
 				&pb.Pong{Pong: "你好，世界"},
 			},
 			wantHeader: metadata.New(map[string]string{
-				"symbol": "-_.~!#$&'()*+,/:;=?@[]%20",
+				"symbol":       "-_.~!#$&'()*+,/:;=?@[]%20",
 				"content-type": "application/grpc",
 			}),
 			wantTrailer: metadata.New(map[string]string{
@@ -174,7 +174,7 @@ func testBidirectionalStreamingRPC(ctx context.Context, t *testing.T) {
 				&pb.Ping{Ping: "failure"},
 			},
 			wantHeader: metadata.New(map[string]string{
-				"symbol": "-_.~!#$&'()*+,/:;=?@[]%20",
+				"symbol":       "-_.~!#$&'()*+,/:;=?@[]%20",
 				"content-type": "application/grpc",
 			}),
 			wantTrailer: func() metadata.MD {
@@ -216,7 +216,7 @@ func testBidirectionalStreamingRPC(ctx context.Context, t *testing.T) {
 				&pb.Pong{Pong: "你好，世界"},
 			},
 			wantHeader: metadata.New(map[string]string{
-				"symbol": "-_.~!#$&'()*+,/:;=?@[]%20",
+				"symbol":       "-_.~!#$&'()*+,/:;=?@[]%20",
 				"content-type": "application/grpc",
 			}),
 			wantTrailer: func() metadata.MD {
@@ -284,7 +284,6 @@ func testBidirectionalStreamingRPC(ctx context.Context, t *testing.T) {
 					_, err = stream.Recv()
 				}
 			}
-
 
 			if !reflect.DeepEqual(err, tt.wantErr) {
 				t.Errorf("error not equal, want: %s, got: %s", tt.wantErr, err)

@@ -185,7 +185,7 @@ func (r *Registry) RegisterGenericService(
 			serviceDesc := grpc.ServiceDesc{
 				ServiceName: string(service.FullName()),
 				HandlerType: (*any)(nil),
-				Metadata: fd.Path(),
+				Metadata:    fd.Path(),
 			}
 
 			for j := 0; j < service.Methods().Len(); j++ {
@@ -193,8 +193,8 @@ func (r *Registry) RegisterGenericService(
 
 				if method.IsStreamingClient() || method.IsStreamingServer() {
 					streamDesc := grpc.StreamDesc{
-						StreamName: string(method.Name()),
-						Handler: genericService.HandleStreamCall,
+						StreamName:    string(method.Name()),
+						Handler:       genericService.HandleStreamCall,
 						ServerStreams: method.IsStreamingServer(),
 						ClientStreams: method.IsStreamingClient(),
 					}
@@ -202,7 +202,7 @@ func (r *Registry) RegisterGenericService(
 				} else {
 					methodDesc := grpc.MethodDesc{
 						MethodName: string(method.Name()),
-						Handler: genericService.HandleUnaryCall,
+						Handler:    genericService.HandleUnaryCall,
 					}
 					serviceDesc.Methods = append(serviceDesc.Methods, methodDesc)
 				}

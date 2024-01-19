@@ -21,11 +21,11 @@ type ServerStream struct {
 
 func NewServerStream(ctx context.Context, stream grpc.ServerStream, messageDesc protoreflect.MessageDescriptor) *ServerStream {
 	serverStream := &ServerStream{
-		ctx: ctx,
-		stream: stream,
+		ctx:         ctx,
+		stream:      stream,
 		messageDesc: messageDesc,
-		requestCh: make(chan *StreamData),
-		done: make(chan struct{}),
+		requestCh:   make(chan *StreamData),
+		done:        make(chan struct{}),
 	}
 	go serverStream.fetchRequests()
 

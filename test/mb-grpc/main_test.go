@@ -1,8 +1,8 @@
 package mbgrpc
 
 import (
-	"context"
 	"bufio"
+	"context"
 	"log"
 	"os"
 	"os/exec"
@@ -44,7 +44,7 @@ func TestMain(m *testing.M) {
 		if err := scanner.Err(); err != nil {
 			log.Println("scanner error:", err)
 		}
-	} ()
+	}()
 	go func() {
 		defer wg.Done()
 		scanner := bufio.NewScanner(stderr)
@@ -54,7 +54,7 @@ func TestMain(m *testing.M) {
 		if err := scanner.Err(); err != nil {
 			log.Println("scanner error:", err)
 		}
-	} ()
+	}()
 
 	err = cmd.Start()
 	if err != nil {

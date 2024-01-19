@@ -56,20 +56,20 @@ func testUnaryRPC(ctx context.Context, t *testing.T) {
 
 	client := pb.NewServiceClient(conn)
 
-	tests := []struct{
+	tests := []struct {
 		name        string
 		request     *pb.Ping
 		want        *pb.Pong
 		wantHeader  metadata.MD
 		wantTrailer metadata.MD
 		wantErr     error
-	} {
+	}{
 		{
-			name: "Success",
+			name:    "Success",
 			request: &pb.Ping{Ping: "success"},
-			want: &pb.Pong{Pong: "Hello, world"},
+			want:    &pb.Pong{Pong: "Hello, world"},
 			wantHeader: metadata.New(map[string]string{
-				"aaaa": "bbb",
+				"aaaa":         "bbb",
 				"content-type": "application/grpc",
 			}),
 			wantTrailer: metadata.New(map[string]string{
@@ -78,10 +78,10 @@ func testUnaryRPC(ctx context.Context, t *testing.T) {
 			wantErr: nil,
 		},
 		{
-			name: "Failure",
+			name:    "Failure",
 			request: &pb.Ping{Ping: "failure"},
 			wantHeader: metadata.New(map[string]string{
-				"aaaa": "bbb",
+				"aaaa":         "bbb",
 				"content-type": "application/grpc",
 			}),
 			wantTrailer: func() metadata.MD {
