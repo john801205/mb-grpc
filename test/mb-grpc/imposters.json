@@ -6,6 +6,7 @@
 			"recordRequests": true,
 			"options": {
 				"protoc": {
+					"importDirs": ["./"],
 					"protoFiles": ["pingpong/pingpong.proto"]
 				}
 			},

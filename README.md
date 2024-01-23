@@ -2,9 +2,9 @@
 
 This repository is a mountebank plugin for the gRPC protocol.
 
-## Description
+## Features
 
-1. Support both unary and streaming calls
+1. Support both unary and streaming RPCs
 2. Support gRPC metadata including header and trailer
 3. Support gRPC status including code, message and details
 4. Support mountebank proxy mode
@@ -14,53 +14,316 @@ This repository is a mountebank plugin for the gRPC protocol.
 
 ### Dependencies
 
-* Describe any prerequisites, libraries, OS version, etc., needed before installing program.
-* ex. Windows 10
+* mountebank
+* go
+* protoc
 
-### Installing
+All should be searchable through the PATH environment variable.
 
-* How/where to download your program
-* Any modifications needed to be made to files/folders
+### Build
 
-### Executing program
-
-* How to run the program
-* Step-by-step bullets
-```
-code blocks for commands
+```shell
+$ make build
 ```
 
-## Help
+This will produce a binary program `mb-grpc` under the bin directory.
 
-Any advise for common problems or issues.
+
+### Run
+
+After the plugin is built, you can run it through the mountebank program.
+
+Create protocols.json file for gRPC:
+
+```json
+{
+  "grpc": {
+    "createCommand": "bin/mb-grpc"
+  }
+}
 ```
-command to run if program contains helper info
+
+Create imposters.json file:
+
+```json
+{
+  "imposters": [
+    {
+      "port": 5568,
+      "protocol": "grpc",
+      "recordRequests": true,
+      "options": {
+        "protoc": {
+          "importDirs": [
+            "./"
+          ],
+          "protoFiles": [
+            "./service.proto"
+          ]
+        }
+      }
+    }
+  ]
+}
 ```
 
-## Authors
+Start Mountebank with protocols file:
 
-Contributors names and contact info
+```shell
+$ mb start --port 2525 --protofile protocols.json --configfile imposters.json --loglevel info
+```
 
-ex. Dominique Pizzie  
-ex. [@DomPizzie](https://twitter.com/dompizzie)
+### Examples
 
-## Version History
+For unary RPCs,
 
-* 0.2
-    * Various bug fixes and optimizations
-    * See [commit change]() or See [release history]()
-* 0.1
-    * Initial Release
+```json
+{
+  "responses": [
+    {
+      "is": {
+        "header": {
+          "aaaa": [
+            "bbb"
+          ],
+          "mb-grpc-data-bin": [
+            "44GE44Gh44Gw44KT"
+          ]
+        },
+        "message": {
+          "pong": "Hello, world"
+        },
+        "trailer": {
+          "bbbb": [
+            "aaa"
+          ],
+          "mb-grpc-data-bin": [
+            "44GE44Gh44Gw44KT"
+          ]
+        },
+        "status": {
+          "code": "OK"
+        }
+      }
+    }
+  ],
+  "predicates": [
+    {
+      "equals": {
+        "method": "/pingpong.Service/PingPong",
+        "messages": [
+          {
+            "from": "client",
+            "message": {
+              "ping": "success"
+            }
+          }
+        ]
+      }
+    }
+  ]
+}
+```
 
-## License
+For streaming RPCs, there are a sequence of messages from either client or server.
 
-This project is licensed under the [NAME HERE] License - see the LICENSE.md file for details
+```json
+{
+  "responses": [
+    {
+      "is": {
+        "header": {
+          "symbol": [
+            "-_.~!#$&'()*+,/:;=?@[]%20"
+          ],
+          "mb-grpc-data-bin": [
+            "44GE44Gh44Gw44KT"
+          ]
+        },
+        "message": {
+          "pong": "Hello, world"
+        }
+      }
+    },
+    {
+      "is": {
+        "message": {
+          "pong": "Hello, world"
+        }
+      },
+      "repeat": 2
+    },
+    {
+      "is": {
+        "message": {
+          "pong": "Hello, world"
+        },
+        "trailer": {
+          "symbol": [
+            "-_.~!#$&'()*+,/:;=?@[]%20"
+          ],
+          "mb-grpc-data-bin": [
+            "44GE44Gh44Gw44KT"
+          ]
+        },
+        "status": {
+          "code": "ABORTED",
+          "message": "message",
+          "details": [
+            {
+              "type": "pingpong.Pong",
+              "message": {
+                "pong": "Hello, world"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "predicates": [
+    {
+      "equals": {
+        "method": "/pingpong.Service/PingPingPongPong",
+        "requestHeader": {
+          "flag": [
+            "failure - pongpingpingpongpongpong"
+          ]
+        }
+      }
+    },
+    {
+      "or": [
+        {
+          "deepEquals": {
+            "messages": []
+          }
+        },
+        {
+          "deepEquals": {
+            "messages": [
+              {
+                "from": "server",
+                "message": {
+                  "pong": "Hello, world"
+                }
+              },
+              {
+                "from": "client",
+                "message": {
+                  "ping": "failure"
+                }
+              },
+              {
+                "from": "client",
+                "message": {
+                  "ping": "failure"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "deepEquals": {
+            "messages": [
+              {
+                "from": "server",
+                "message": {
+                  "pong": "Hello, world"
+                }
+              },
+              {
+                "from": "client",
+                "message": {
+                  "ping": "failure"
+                }
+              },
+              {
+                "from": "client",
+                "message": {
+                  "ping": "failure"
+                }
+              },
+              {
+                "from": "server",
+                "message": {
+                  "pong": "Hello, world"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "deepEquals": {
+            "messages": [
+              {
+                "from": "server",
+                "message": {
+                  "pong": "Hello, world"
+                }
+              },
+              {
+                "from": "client",
+                "message": {
+                  "ping": "failure"
+                }
+              },
+              {
+                "from": "client",
+                "message": {
+                  "ping": "failure"
+                }
+              },
+              {
+                "from": "server",
+                "message": {
+                  "pong": "Hello, world"
+                }
+              },
+              {
+                "from": "server",
+                "message": {
+                  "pong": "Hello, world"
+                }
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}
+```
 
-## Acknowledgments
-
-Inspiration, code snippts, etc.
-* [awesome-readme](https://github.com/matiassingers/awesome-readme)
-* [PurpleBooth](https://gist.github.com/PurpleBooth/109311bb0361f32d87a2)
-* [dbader](https://github.com/dbader/readme-template)
-* [zenorocha](https://gist.github.com/zenorocha/4526327)
-* [fvcproductions](https://gist.github.com/fvcproductions/1bfc2d4aecb01a834b46)e
+It is also viable to proxy to other gRPC server.
+```json
+{
+  "responses": [
+    {
+      "proxy": {
+        "to": "localhost:5569",
+        "mode": "proxyOnce",
+        "predicateGenerators": [
+          {
+            "matches": {
+              "method": true,
+              "messages": true,
+              "requestHeader": true,
+              "responseHeader": true
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "predicates": [
+    {
+      "exists": {
+        "requestHeader": {
+          "proxy-mode": true
+        }
+      }
+    }
+  ]
+}
+```
