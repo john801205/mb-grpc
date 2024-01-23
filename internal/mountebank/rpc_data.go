@@ -17,9 +17,9 @@ type RpcMessage struct {
 
 type RpcData struct {
 	Method         string        `json:"method"`
-	RequestHeader  metadata.MD   `json:"requestHeader,omitempty"`
-	ResponseHeader metadata.MD   `json:"responseHeader,omitempty"`
-	Messages       []*RpcMessage `json:"messages,omitempty"`
+	RequestHeader  metadata.MD   `json:"requestHeader"`
+	ResponseHeader metadata.MD   `json:"responseHeader"`
+	Messages       []*RpcMessage `json:"messages"`
 }
 
 func NewRpcData(method string) *RpcData {
@@ -27,6 +27,7 @@ func NewRpcData(method string) *RpcData {
 		Method:         method,
 		RequestHeader:  metadata.New(nil),
 		ResponseHeader: metadata.New(nil),
+		Messages:       make([]*RpcMessage, 0),
 	}
 }
 

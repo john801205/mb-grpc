@@ -32,36 +32,7 @@
 							"exists": {
 								"requestHeader": {
 									"proxy-mode": true
-								},
-								"messages": true
-							}
-						}
-					],
-					"caseSensitive": false
-				},
-				{
-					"responses": [
-						{
-							"proxy": {
-								"to": "localhost:5569",
-								"mode": "proxyOnce",
-								"predicateGenerators": [{
-									"matches": {
-										"method": true,
-										"requestHeader": true,
-										"responseHeader": true
-									}
-								}]
-							}
-						}
-					],
-					"predicates": [
-						{
-							"exists": {
-								"requestHeader": {
-									"proxy-mode": true
-								},
-								"messages": false
+								}
 							}
 						}
 					],
@@ -508,8 +479,9 @@
 						{
 							"or": [
 								{
-									"exists": {
-										"messages": false
+									"deepEquals": {
+										"messages": [
+										]
 									}
 								},
 								{
@@ -797,8 +769,9 @@
 						{
 							"or": [
 								{
-									"exists": {
-										"messages": false
+									"deepEquals": {
+										"messages": [
+										]
 									}
 								},
 								{
