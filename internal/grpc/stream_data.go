@@ -24,7 +24,7 @@ func (s *StreamData) MarshalJSON() ([]byte, error) {
 	}
 
 	data := &streamData{
-		Header: s.Header,
+		Header:  s.Header,
 		Trailer: s.Trailer,
 	}
 

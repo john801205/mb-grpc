@@ -64,8 +64,8 @@
 							"equals": {
 								"method": "/pingpong.Service/PingPong",
 								"messages": [{
-									"type": "request",
-									"value": {
+									"from": "client",
+									"message": {
 										"ping": "success"
 									}
 								}]
@@ -92,7 +92,7 @@
 									"details": [
 										{
 											"type": "pingpong.Pong",
-											"value": {
+											"message": {
 												"pong": "Hello, world"
 											}
 										}
@@ -106,8 +106,8 @@
 							"equals": {
 								"method": "/pingpong.Service/PingPong",
 								"messages": [{
-									"type": "request",
-									"value": {
+									"from": "client",
+									"message": {
 										"ping": "failure"
 									}
 								}]
@@ -151,8 +151,8 @@
 							"equals": {
 								"method": "/pingpong.Service/PingPongPong",
 								"messages": [{
-									"type": "request",
-									"value": {
+									"from": "client",
+									"message": {
 										"ping": "success"
 									}
 								}]
@@ -183,7 +183,7 @@
 									"details": [
 										{
 											"type": "pingpong.Pong",
-											"value": {
+											"message": {
 												"pong": "你好，世界"
 											}
 										}
@@ -197,8 +197,8 @@
 							"equals": {
 								"method": "/pingpong.Service/PingPongPong",
 								"messages": [{
-									"type": "request",
-									"value": {
+									"from": "client",
+									"message": {
 										"ping": "failure"
 									}
 								}]
@@ -234,14 +234,14 @@
 								"method": "/pingpong.Service/PingPingPong",
 								"messages": [
 									{
-										"type": "request",
-										"value": {
+										"from": "client",
+										"message": {
 											"ping": "success"
 										}
 									},
 									{
-										"type": "request",
-										"value": {
+										"from": "client",
+										"message": {
 											"ping": "success"
 										}
 									}
@@ -269,7 +269,7 @@
 									"details": [
 										{
 											"type": "pingpong.Pong",
-											"value": {
+											"message": {
 												"pong": "你好，世界"
 											}
 										}
@@ -284,20 +284,20 @@
 								"method": "/pingpong.Service/PingPingPong",
 								"messages": [
 									{
-										"type": "request",
-										"value": {
+										"from": "client",
+										"message": {
 											"ping": "failure"
 										}
 									},
 									{
-										"type": "request",
-										"value": {
+										"from": "client",
+										"message": {
 											"ping": "failure"
 										}
 									},
 									{
-										"type": "request",
-										"value": {
+										"from": "client",
+										"message": {
 											"ping": "failure"
 										}
 									}
@@ -356,8 +356,8 @@
 									"deepEquals": {
 										"messages": [
 											{
-												"type": "request",
-												"value": {
+												"from": "client",
+												"message": {
 													"ping": "success"
 												}
 											}
@@ -368,14 +368,14 @@
 									"deepEquals": {
 										"messages": [
 											{
-												"type": "request",
-												"value": {
+												"from": "client",
+												"message": {
 													"ping": "success"
 												}
 											},
 											{
-												"type": "response",
-												"value": {
+												"from": "server",
+												"message": {
 													"pong": "你好，世界"
 												}
 											}
@@ -386,38 +386,38 @@
 									"deepEquals": {
 										"messages": [
 											{
-												"type": "request",
-												"value": {
+												"from": "client",
+												"message": {
 													"ping": "success"
 												}
 											},
 											{
-												"type": "response",
-												"value": {
+												"from": "server",
+												"message": {
 													"pong": "你好，世界"
 												}
 											},
 											{
-												"type": "response",
-												"value": {
+												"from": "server",
+												"message": {
 													"pong": "你好，世界"
 												}
 											},
 											{
-												"type": "request",
-												"value": {
+												"from": "client",
+												"message": {
 													"ping": "success"
 												}
 											},
 											{
-												"type": "request",
-												"value": {
+												"from": "client",
+												"message": {
 													"ping": "success"
 												}
 											},
 											{
-												"type": "request",
-												"value": {
+												"from": "client",
+												"message": {
 													"ping": "success"
 												}
 											}
@@ -488,20 +488,20 @@
 									"deepEquals": {
 										"messages": [
 											{
-												"type": "response",
-												"value": {
+												"from": "server",
+												"message": {
 													"pong": "你好，世界"
 												}
 											},
 											{
-												"type": "request",
-												"value": {
+												"from": "client",
+												"message": {
 													"ping": "success"
 												}
 											},
 											{
-												"type": "request",
-												"value": {
+												"from": "client",
+												"message": {
 													"ping": "success"
 												}
 											}
@@ -512,26 +512,26 @@
 									"deepEquals": {
 										"messages": [
 											{
-												"type": "response",
-												"value": {
+												"from": "server",
+												"message": {
 													"pong": "你好，世界"
 												}
 											},
 											{
-												"type": "request",
-												"value": {
+												"from": "client",
+												"message": {
 													"ping": "success"
 												}
 											},
 											{
-												"type": "request",
-												"value": {
+												"from": "client",
+												"message": {
 													"ping": "success"
 												}
 											},
 											{
-												"type": "response",
-												"value": {
+												"from": "server",
+												"message": {
 													"pong": "你好，世界"
 												}
 											}
@@ -542,32 +542,32 @@
 									"deepEquals": {
 										"messages": [
 											{
-												"type": "response",
-												"value": {
+												"from": "server",
+												"message": {
 													"pong": "你好，世界"
 												}
 											},
 											{
-												"type": "request",
-												"value": {
+												"from": "client",
+												"message": {
 													"ping": "success"
 												}
 											},
 											{
-												"type": "request",
-												"value": {
+												"from": "client",
+												"message": {
 													"ping": "success"
 												}
 											},
 											{
-												"type": "response",
-												"value": {
+												"from": "server",
+												"message": {
 													"pong": "你好，世界"
 												}
 											},
 											{
-												"type": "response",
-												"value": {
+												"from": "server",
+												"message": {
 													"pong": "你好，世界"
 												}
 											}
@@ -611,7 +611,7 @@
 									"details": [
 										{
 											"type": "pingpong.Pong",
-											"value": {
+											"message": {
 												"pong": "你好，世界"
 											}
 										}
@@ -637,8 +637,8 @@
 									"deepEquals": {
 										"messages": [
 											{
-												"type": "request",
-												"value": {
+												"from": "client",
+												"message": {
 													"ping": "failure"
 												}
 											}
@@ -649,14 +649,14 @@
 									"deepEquals": {
 										"messages": [
 											{
-												"type": "request",
-												"value": {
+												"from": "client",
+												"message": {
 													"ping": "failure"
 												}
 											},
 											{
-												"type": "response",
-												"value": {
+												"from": "server",
+												"message": {
 													"pong": "你好，世界"
 												}
 											}
@@ -667,38 +667,38 @@
 									"deepEquals": {
 										"messages": [
 											{
-												"type": "request",
-												"value": {
+												"from": "client",
+												"message": {
 													"ping": "failure"
 												}
 											},
 											{
-												"type": "response",
-												"value": {
+												"from": "server",
+												"message": {
 													"pong": "你好，世界"
 												}
 											},
 											{
-												"type": "response",
-												"value": {
+												"from": "server",
+												"message": {
 													"pong": "你好，世界"
 												}
 											},
 											{
-												"type": "request",
-												"value": {
+												"from": "client",
+												"message": {
 													"ping": "failure"
 												}
 											},
 											{
-												"type": "request",
-												"value": {
+												"from": "client",
+												"message": {
 													"ping": "failure"
 												}
 											},
 											{
-												"type": "request",
-												"value": {
+												"from": "client",
+												"message": {
 													"ping": "failure"
 												}
 											}
@@ -746,7 +746,7 @@
 									"details": [
 										{
 											"type": "pingpong.Pong",
-											"value": {
+											"message": {
 												"pong": "你好，世界"
 											}
 										}
@@ -778,20 +778,20 @@
 									"deepEquals": {
 										"messages": [
 											{
-												"type": "response",
-												"value": {
+												"from": "server",
+												"message": {
 													"pong": "你好，世界"
 												}
 											},
 											{
-												"type": "request",
-												"value": {
+												"from": "client",
+												"message": {
 													"ping": "failure"
 												}
 											},
 											{
-												"type": "request",
-												"value": {
+												"from": "client",
+												"message": {
 													"ping": "failure"
 												}
 											}
@@ -802,26 +802,26 @@
 									"deepEquals": {
 										"messages": [
 											{
-												"type": "response",
-												"value": {
+												"from": "server",
+												"message": {
 													"pong": "你好，世界"
 												}
 											},
 											{
-												"type": "request",
-												"value": {
+												"from": "client",
+												"message": {
 													"ping": "failure"
 												}
 											},
 											{
-												"type": "request",
-												"value": {
+												"from": "client",
+												"message": {
 													"ping": "failure"
 												}
 											},
 											{
-												"type": "response",
-												"value": {
+												"from": "server",
+												"message": {
 													"pong": "你好，世界"
 												}
 											}
@@ -832,32 +832,32 @@
 									"deepEquals": {
 										"messages": [
 											{
-												"type": "response",
-												"value": {
+												"from": "server",
+												"message": {
 													"pong": "你好，世界"
 												}
 											},
 											{
-												"type": "request",
-												"value": {
+												"from": "client",
+												"message": {
 													"ping": "failure"
 												}
 											},
 											{
-												"type": "request",
-												"value": {
+												"from": "client",
+												"message": {
 													"ping": "failure"
 												}
 											},
 											{
-												"type": "response",
-												"value": {
+												"from": "server",
+												"message": {
 													"pong": "你好，世界"
 												}
 											},
 											{
-												"type": "response",
-												"value": {
+												"from": "server",
+												"message": {
 													"pong": "你好，世界"
 												}
 											}

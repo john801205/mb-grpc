@@ -25,8 +25,8 @@ type RpcResponse struct {
 }
 
 type rpcStatusDetail struct {
-	Type  string          `json:"type"`
-	Value json.RawMessage `json:"value"`
+	Type    string          `json:"type"`
+	Message json.RawMessage `json:"message"`
 }
 
 type rpcStatus struct {
@@ -71,7 +71,7 @@ func convert(r *rpcResponse, desc protoreflect.MessageDescriptor) (*RpcResponse,
 				}
 
 				msg := msgType.New().Interface()
-				err = protojson.Unmarshal(detail.Value, msg)
+				err = protojson.Unmarshal(detail.Message, msg)
 				if err != nil {
 					return nil, err
 				}
@@ -155,8 +155,8 @@ func (r *RpcResponse) MarshalJSON() ([]byte, error) {
 				}
 
 				details = append(details, &rpcStatusDetail{
-					Type:  string(proto.MessageName(dd)),
-					Value: bytes,
+					Type:    string(proto.MessageName(dd)),
+					Message: bytes,
 				})
 			default:
 				return nil, errors.New("unexpected type inside the status details")

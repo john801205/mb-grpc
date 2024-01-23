@@ -11,8 +11,8 @@ import (
 )
 
 type RpcMessage struct {
-	Type  string          `json:"type"`
-	Value json.RawMessage `json:"value"`
+	From    string          `json:"from"`
+	Message json.RawMessage `json:"message"`
 }
 
 type RpcData struct {
@@ -50,8 +50,8 @@ func (d *RpcData) AddRequestData(header metadata.MD, message proto.Message) erro
 		}
 
 		d.Messages = append(d.Messages, &RpcMessage{
-			Type:  "request",
-			Value: bytes,
+			From:    "client",
+			Message: bytes,
 		})
 	}
 
@@ -77,8 +77,8 @@ func (d *RpcData) AddResponseData(header metadata.MD, message proto.Message) err
 		}
 
 		d.Messages = append(d.Messages, &RpcMessage{
-			Type:  "response",
-			Value: bytes,
+			From:    "server",
+			Message: bytes,
 		})
 	}
 
