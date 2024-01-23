@@ -84,3 +84,8 @@ func (d *RpcData) AddResponseData(header metadata.MD, message proto.Message) err
 
 	return nil
 }
+
+func (d *RpcData) String() string {
+	bytes, _ := json.Marshal(d)
+	return string(bytes)
+}

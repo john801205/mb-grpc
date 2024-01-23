@@ -3,7 +3,6 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 	"net"
 	"os"
 	"strconv"
@@ -12,6 +11,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
 
+	"github.com/john801205/mb-grpc/internal/log"
 	"github.com/john801205/mb-grpc/internal/mountebank"
 	"github.com/john801205/mb-grpc/internal/proto"
 	"github.com/john801205/mb-grpc/internal/service"
@@ -36,8 +36,6 @@ type ProtocOptions struct {
 }
 
 func main() {
-	log.Println(os.Args)
-
 	config := &Config{}
 	err := json.Unmarshal([]byte(os.Args[1]), config)
 	if err != nil {
@@ -82,6 +80,6 @@ func main() {
 	}
 	defer lis.Close()
 
-	fmt.Println("grpc")
+	log.Infof("arguments: %v", os.Args)
 	grpcServer.Serve(lis)
 }

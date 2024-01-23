@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 
 	"google.golang.org/protobuf/reflect/protoreflect"
@@ -81,10 +80,6 @@ func (c *Client) GetResponse(
 	httpBody, err := io.ReadAll(httpResponse.Body)
 	if err != nil {
 		return nil, err
-	}
-
-	{
-		log.Println("mb", string(data), string(httpBody))
 	}
 
 	temp := &getResponseResponse{}

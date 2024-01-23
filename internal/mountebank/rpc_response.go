@@ -208,3 +208,8 @@ func (r *RpcResponse) IsEmpty() bool {
 	}
 	return len(r.Header) == 0 && len(r.Trailer) == 0 && r.Message == nil && r.Status == nil
 }
+
+func (r *RpcResponse) String() string {
+	bytes, _ := json.Marshal(r)
+	return string(bytes)
+}

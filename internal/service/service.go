@@ -5,18 +5,17 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
-	"google.golang.org/protobuf/encoding/prototext"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/dynamicpb"
 
 	intGrpc "github.com/john801205/mb-grpc/internal/grpc"
+	"github.com/john801205/mb-grpc/internal/log"
 	"github.com/john801205/mb-grpc/internal/mountebank"
 	intProto "github.com/john801205/mb-grpc/internal/proto"
 )
@@ -54,14 +53,12 @@ func (s *Service) HandleUnaryCall(srv any, ctx context.Context, dec func(any) er
 	if err != nil {
 		return nil, err
 	}
-
 	rpcData := mountebank.NewRpcData(method)
 	err = rpcData.AddRequestData(md, request)
 	if err != nil {
 		return nil, err
 	}
-
-	log.Println("request", rpcData, prototext.Format(request))
+	log.Debugf("unary client request: %s", rpcData)
 
 	mbResp, err := s.mbClient.GetResponse(intCtx, rpcData, methodDesc.Output())
 	if err != nil {
@@ -69,7 +66,6 @@ func (s *Service) HandleUnaryCall(srv any, ctx context.Context, dec func(any) er
 	}
 
 	if mbResp.Proxy != nil {
-		log.Printf("proxy: %s", mbResp.Proxy.To)
 		conn, err := grpc.Dial(mbResp.Proxy.To, grpc.WithTransportCredentials(insecure.NewCredentials()))
 		if err != nil {
 			return nil, err
@@ -88,6 +84,7 @@ func (s *Service) HandleUnaryCall(srv any, ctx context.Context, dec func(any) er
 			Trailer: trailer,
 			Status:  status.Convert(err),
 		}
+		log.Debugf("proxied server response: %s", rpcResp)
 
 		mbResp, err = s.mbClient.SaveProxyResponse(intCtx, mbResp.ProxyCallbackURL, rpcResp, methodDesc.Output())
 		if err != nil {
@@ -139,6 +136,7 @@ func (s *Service) HandleStreamCall(srv any, stream grpc.ServerStream) error {
 				serverStream.WaitFinished()
 			}
 
+			log.Debugf("stream client request: %s", request)
 			if request.Error == io.EOF {
 				err := clientStream.CloseSend()
 				if err != nil {
@@ -178,6 +176,7 @@ func (s *Service) HandleStreamCall(srv any, stream grpc.ServerStream) error {
 			if response.Error != nil {
 				clientStream.WaitFinished()
 			}
+			log.Debugf("proxied server response: %s", response)
 
 			var st *status.Status
 			if response.Error == io.EOF {
@@ -192,8 +191,6 @@ func (s *Service) HandleStreamCall(srv any, stream grpc.ServerStream) error {
 				Trailer: response.Trailer,
 				Status:  st,
 			}
-
-			log.Println("client resp", rpcResp)
 
 			_, err := s.mbClient.SaveProxyResponse(intCtx, proxyCallbackURL, rpcResp, methodDesc.Output())
 			if err != nil {
@@ -253,7 +250,6 @@ func (s *Service) HandleStreamCall(srv any, stream grpc.ServerStream) error {
 				proxyCallbackURL = mbResp.ProxyCallbackURL
 			} else if !mbResp.Response.IsEmpty() {
 				lastMessage = nil
-				log.Println("here", mbResp.Response)
 
 				err = serverStream.SendMsg(
 					mbResp.Response.Header,
