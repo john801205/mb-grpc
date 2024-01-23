@@ -39,7 +39,7 @@ func main() {
 	config := &Config{}
 	err := json.Unmarshal([]byte(os.Args[1]), config)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatalf("failed to load config: %v", err)
 	}
 
 	host := ""
@@ -65,7 +65,7 @@ func main() {
 
 	registry, err := proto.Load(importDirs, protoFiles)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatalf("failed to load the proto files: %v", err)
 	}
 
 	genericService := service.New(registry, mbClient)

@@ -126,6 +126,8 @@ For unary RPCs,
 ```
 
 For streaming RPCs, there are a sequence of messages from either client or server.
+mb-grpc will ignore an empty response from mountebank and wait for the next
+message from client or server.
 
 ```json
 {

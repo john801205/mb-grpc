@@ -15,6 +15,8 @@ import (
 	"google.golang.org/protobuf/reflect/protoregistry"
 	"google.golang.org/protobuf/types/descriptorpb"
 	"google.golang.org/protobuf/types/dynamicpb"
+
+	"github.com/john801205/mb-grpc/internal/log"
 )
 
 type Registry struct {
@@ -102,6 +104,7 @@ func Load(importDirs, protoFiles []string) (*Registry, error) {
 	if err != nil {
 		return nil, err
 	}
+	defer os.RemoveAll(tmpDir)
 	tmpFilePath := filepath.Join(tmpDir, "proto.desc")
 
 	var protocArgs []string
@@ -114,8 +117,9 @@ func Load(importDirs, protoFiles []string) (*Registry, error) {
 	protocArgs = append(protocArgs, protoFiles...)
 
 	cmd := exec.Command("protoc", protocArgs...)
-	err = cmd.Run()
+	output, err := cmd.CombinedOutput()
 	if err != nil {
+		log.Errorf("protoc output: %s", output)
 		return nil, err
 	}
 
