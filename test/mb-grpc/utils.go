@@ -1,7 +1,7 @@
 package mbgrpc
 
 import (
-	"google.golang.org/protobuf/encoding/prototext"
+	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -26,7 +26,8 @@ func formatSlice[T proto.Message](a []T) string {
 			res += ","
 		}
 
-		res += prototext.Format(a[i])
+		bytes, _ := protojson.Marshal(a[i])
+		res += string(bytes)
 	}
 	res += "]"
 	return res
