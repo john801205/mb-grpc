@@ -125,7 +125,7 @@ func (s *Service) HandleStreamCall(srv any, stream grpc.ServerStream) error {
 	var clientStream *intGrpc.ClientStream
 	var proxyCallbackURL string
 	serverStream := intGrpc.NewServerStream(intCtx, stream, methodDesc.Input())
-	var lastMessage proto.Message
+	var lastUnforwardedClientMessage proto.Message
 
 	rpcData := mountebank.NewRpcData(method)
 
@@ -166,7 +166,7 @@ func (s *Service) HandleStreamCall(srv any, stream grpc.ServerStream) error {
 				return err
 			}
 
-			lastMessage = request.Message
+			lastUnforwardedClientMessage = request.Message
 
 		case response := <-clientStream.Responses():
 			if proxyCallbackURL == "" {
@@ -212,7 +212,7 @@ func (s *Service) HandleStreamCall(srv any, stream grpc.ServerStream) error {
 				return err
 			}
 
-			lastMessage = nil
+			lastUnforwardedClientMessage = nil
 		}
 
 		for {
@@ -239,17 +239,18 @@ func (s *Service) HandleStreamCall(srv any, stream grpc.ServerStream) error {
 					}
 				}
 
-				if lastMessage != nil {
-					err := clientStream.Forward(lastMessage)
+				if lastUnforwardedClientMessage != nil {
+					err := clientStream.Forward(lastUnforwardedClientMessage)
 					if err != nil {
 						return err
 					}
-					lastMessage = nil
+					lastUnforwardedClientMessage = nil
 				}
 
 				proxyCallbackURL = mbResp.ProxyCallbackURL
+				break
 			} else if !mbResp.Response.IsEmpty() {
-				lastMessage = nil
+				lastUnforwardedClientMessage = nil
 
 				err = serverStream.SendMsg(
 					mbResp.Response.Header,
@@ -269,10 +270,10 @@ func (s *Service) HandleStreamCall(srv any, stream grpc.ServerStream) error {
 				}
 
 				continue
+			} else {
+				lastUnforwardedClientMessage = nil
+				break
 			}
-
-			lastMessage = nil
-			break
 		}
 	}
 

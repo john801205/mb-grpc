@@ -53,9 +53,6 @@
 								"trailer": {
 									"bbbb": ["aaa"],
 									"mb-grpc-data-bin": ["44GE44Gh44Gw44KT"]
-								},
-								"status": {
-									"code": "OK"
 								}
 							}
 						}
