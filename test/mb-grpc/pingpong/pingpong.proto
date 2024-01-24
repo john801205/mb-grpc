@@ -4,17 +4,11 @@ package pingpong;
 
 option go_package = "github.com/john801205/mb-grpc/test/mb-grpc/pingpong";
 
+import "messages.proto";
+
 service Service {
 	rpc PingPong(Ping) returns (Pong) {}
 	rpc PingPongPong(Ping) returns (stream Pong) {}
 	rpc PingPingPong(stream Ping) returns (Pong) {}
 	rpc PingPingPongPong(stream Ping) returns (stream Pong) {}
-}
-
-message Ping {
-	string ping = 1;
-}
-
-message Pong {
-	string pong = 1;
 }
